@@ -1,0 +1,49 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Lzq.Core" Version="0.2.0" />
+        <PackageReference Include="Lzq.Extensions.Serilog" Version="$(LzqExtensionsVersion)" />
+        <PackageReference Include="Lzq.Extensions.SqlSugar" Version="$(LzqExtensionsVersion)" />
+        <PackageReference Include="Lzq.Extensions.EventBus" Version="$(LzqExtensionsVersion)" />
+        <PackageReference Include="Lzq.Extensions.EventBus.RabbitMq" Version="$(LzqExtensionsVersion)" />
+        <PackageReference Include="Lzq.Extensions.Jwt" Version="$(LzqExtensionsVersion)" />
+        <PackageReference Include="Lzq.Extensions.NSwag" Version="$(LzqExtensionsVersion)" />
+        <PackageReference Include="Lzq.Extensions.AI" Version="$(LzqExtensionsVersion)" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Modules\AI\Lzq.AI.Application\Lzq.AI.Application.csproj" />
+        <ProjectReference Include="..\Modules\BaseData\Lzq.BaseData.Application\Lzq.BaseData.Application.csproj" />
+        <ProjectReference Include="..\Modules\Dashboard\Lzq.Dashboard.Application\Lzq.Dashboard.Application.csproj" />
+        <ProjectReference Include="..\Modules\Equipment\Lzq.Equipment.Application\Lzq.Equipment.Application.csproj" />
+        <ProjectReference Include="..\Modules\QA\Lzq.QA.Application\Lzq.QA.Application.csproj" />
+        <ProjectReference Include="..\Modules\Rbac\Lzq.Rbac.Application\Lzq.Rbac.Application.csproj" />
+        <ProjectReference Include="..\Modules\Temp\Lzq.Temp.Application\Lzq.Temp.Application.csproj" />
+        <ProjectReference Include="..\Modules\WorkOrder\Lzq.WorkOrder.Application\Lzq.WorkOrder.Application.csproj" />
+        <ProjectReference Include="..\Skills\Lzq.MES.Skills\Lzq.MES.Skills.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <Folder Include="ExternalSkills\mes-operation-handbook\" />
+        <Folder Include="ExternalSkills\vben-frontend-dev\" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <None Update="ExternalSkills\lzq-dev-handbook\**">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Update="ExternalSkills\mes-operation-handbook\**">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Update="ExternalSkills\vben-frontend-dev\**">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+    </ItemGroup>
+
+</Project>
