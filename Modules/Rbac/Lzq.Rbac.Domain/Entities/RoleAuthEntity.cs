@@ -1,0 +1,21 @@
+﻿using Lzq.Extensions.SqlSugar.Entities;
+using SqlSugar;
+
+namespace Lzq.Rbac.Domain.Entities;
+
+[Tenant("AgentForge"), SugarTable("rbac_role_auth")]
+public class RoleAuthEntity : BaseFullEntity
+{
+    /// <summary>
+    /// RoleId
+    /// </summary>
+    [SugarColumn(ColumnName = "role_id")]
+    public long RoleId { get; set; }
+
+    /// <summary>
+    /// MenuId
+    /// </summary>
+    [SugarColumn(ColumnName = "menu_id")]
+    public long MenuId { get; set; }
+
+}
