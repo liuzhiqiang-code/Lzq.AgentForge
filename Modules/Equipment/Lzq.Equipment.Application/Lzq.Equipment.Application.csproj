@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Lzq.Core" Version="$(LzqExtensionsVersion)" />
+    <PackageReference Include="Lzq.Extensions.NSwag" Version="$(LzqExtensionsVersion)" />
+    <PackageReference Include="Lzq.Extensions.Redis" Version="$(LzqExtensionsVersion)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Lzq.Equipment.Domain\Lzq.Equipment.Domain.csproj" />
+    <ProjectReference Include="..\Lzq.Equipment.Application.Contracts\Lzq.Equipment.Application.Contracts.csproj" />
+  </ItemGroup>
+
+</Project>

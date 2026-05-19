@@ -1,0 +1,14 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Lzq.Extensions.AI" Version="$(LzqExtensionsVersion)" />
+		<PackageReference Include="Lzq.Extensions.SqlSugar" Version="$(LzqExtensionsVersion)" />
+	</ItemGroup>
+
+</Project>

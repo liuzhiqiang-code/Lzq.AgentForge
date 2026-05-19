@@ -1,0 +1,49 @@
+{
+  "title": "基础数据",
+  "common": {
+    "statusDisabled": "禁用",
+    "statusEnabled": "启用",
+    "placeholderSelectWorkshop": "请选择车间",
+    "placeholderSelectFactory": "请选择工厂",
+    "placeholderSelectLine": "请选择产线"
+  },
+  "factory": {
+    "title": "工厂管理",
+    "list": "工厂列表",
+    "name": "工厂",
+    "code": "工厂编码",
+    "address": "工厂地址",
+    "status": "状态",
+    "operation": "操作"
+  },
+  "workshop": {
+    "title": "车间管理",
+    "list": "车间列表",
+    "name": "车间",
+    "code": "车间编码",
+    "factoryId": "所属工厂",
+    "manager": "负责人",
+    "status": "状态",
+    "operation": "操作"
+  },
+  "line": {
+    "title": "产线管理",
+    "list": "产线列表",
+    "name": "产线",
+    "code": "产线编码",
+    "workshopId": "所属车间",
+    "status": "状态",
+    "operation": "操作"
+  },
+  "process": {
+    "title": "工序管理",
+    "list": "工序列表",
+    "name": "工序",
+    "code": "工序编码",
+    "lineId": "所属产线",
+    "sequence": "工序序号",
+    "standardHours": "标准工时(h)",
+    "status": "状态",
+    "operation": "操作"
+  }
+}

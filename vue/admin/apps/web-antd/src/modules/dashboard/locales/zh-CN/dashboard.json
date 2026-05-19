@@ -1,0 +1,23 @@
+{
+  "title": "看板",
+  "overview": "总览",
+  "productionOutput": "产量统计",
+  "completionRate": "工单完成率",
+  "equipmentStatus": "设备状态",
+  "defectRate": "不良率统计",
+  "todayOutput": "今日产量",
+  "weekOutput": "本周产量",
+  "completionRateValue": "完成率",
+  "dispatched": "已派发",
+  "completed": "已完成",
+  "running": "运行",
+  "stopped": "停机",
+  "maintenance": "维修",
+  "scrapped": "报废",
+  "todayDefectRate": "今日不良率",
+  "weekTrend": "本周趋势",
+  "outputTrend": "产量趋势",
+  "byLine": "按产线",
+  "defectTrend": "不良率趋势",
+  "byTimePeriod": "按时间段"
+}

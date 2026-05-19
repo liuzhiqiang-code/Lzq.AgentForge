@@ -1,0 +1,65 @@
+version: "3.8"
+
+# ============================================
+# Lzq.MES 开发环境基础设施
+# 启动: docker compose up -d
+# 停止: docker compose down
+# ============================================
+
+services:
+  # ---------- RabbitMQ (事件总线) ----------
+  rabbitmq:
+    image: rabbitmq:4.0-management-alpine
+    container_name: mes-rabbitmq
+    hostname: mes-rabbitmq
+    restart: unless-stopped
+    ports:
+      - "5672:5672"   # AMQP
+      - "15672:15672" # 管理界面
+    environment:
+      RABBITMQ_DEFAULT_USER: mes
+      RABBITMQ_DEFAULT_PASS: mes123
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_port_connectivity"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ---------- PostgreSQL (可选，替代 SQLite) ----------
+  # 如需使用 PostgreSQL，取消以下注释，并在 appsettings.json 中切换 DbType
+  # postgres:
+  #   image: postgres:16-alpine
+  #   container_name: mes-postgres
+  #   restart: unless-stopped
+  #   ports:
+  #     - "5432:5432"
+  #   environment:
+  #     POSTGRES_USER: mes
+  #     POSTGRES_PASSWORD: mes123
+  #     POSTGRES_DB: lzq_mes
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "pg_isready -U mes -d lzq_mes"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5
+
+  # ---------- Redis (可选，看板缓存) ----------
+  # redis:
+  #   image: redis:7-alpine
+  #   container_name: mes-redis
+  #   restart: unless-stopped
+  #   ports:
+  #     - "6379:6379"
+  #   healthcheck:
+  #     test: ["CMD", "redis-cli", "ping"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5
+
+volumes:
+  rabbitmq_data:
+  # postgres_data:

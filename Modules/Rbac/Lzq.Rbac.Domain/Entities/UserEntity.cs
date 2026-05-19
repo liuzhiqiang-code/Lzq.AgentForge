@@ -1,0 +1,75 @@
+﻿using Lzq.Extensions.SqlSugar.Entities;
+using SqlSugar;
+
+namespace Lzq.Rbac.Domain.Entities;
+
+[Tenant("AgentForge"), SugarTable("rbac_user")]
+public class UserEntity : BaseFullEntity
+{
+    /// <summary>
+    /// 姓名
+    /// </summary>
+    [SugarColumn(ColumnName = "user_name", Length = 100)]
+    public string UserName { get; set; }
+
+    /// <summary>
+    /// 密码
+    /// </summary>
+    [SugarColumn(ColumnName = "password", Length = 2000)]
+    public string Password { get; set; }
+
+    /// <summary>
+    /// 姓
+    /// </summary>
+    [SugarColumn(ColumnName = "surname", Length = 100)]
+    public string? Surname { get; set; }
+
+    /// <summary>
+    /// 名
+    /// </summary>
+    [SugarColumn(ColumnName = "given_name", Length = 100)]
+    public string? GivenName { get; set; }
+
+    /// <summary>
+    /// 邮箱
+    /// </summary>
+    [SugarColumn(ColumnName = "email", Length = 200)]
+    public string? Email { get; set; }
+
+    /// <summary>
+    /// 手机号
+    /// </summary>
+    [SugarColumn(ColumnName = "phone", Length = 100)]
+    public string? Phone { get; set; }
+
+    /// <summary>
+    /// 年龄
+    /// </summary>
+    [SugarColumn(ColumnName = "age")]
+    public int? Age { get; set; }
+
+    /// <summary>
+    /// 性别
+    /// </summary>
+    [SugarColumn(ColumnName = "sex")]
+    public int? Sex { get; set; }
+
+    /// <summary>
+    /// 备注
+    /// </summary>
+    [SugarColumn(ColumnName = "remark", Length = 2000)]
+    public string? Remark { get; set; }
+
+    /// <summary>
+    /// 所属部门
+    /// </summary>
+    [SugarColumn(ColumnName = "dept_id")]
+    public long? DeptId { get; set; }
+
+    /// <summary>
+    /// 所属角色
+    /// </summary>
+    [SugarColumn(ColumnName = "roles", IsJson = true)]
+    public List<string>? Roles { get; set; }
+
+}
