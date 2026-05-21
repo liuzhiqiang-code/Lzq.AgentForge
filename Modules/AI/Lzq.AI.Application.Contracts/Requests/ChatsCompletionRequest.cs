@@ -2,7 +2,7 @@ namespace Lzq.AI.Application.Contracts.Requests;
 
 public class ChatsCompletionRequest
 {
-    public long? AIChatsId { get; set; }
+    public long? ChatsId { get; set; }
 
     public long AIModelConfigId { get; set; }
 

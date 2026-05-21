@@ -1,7 +1,7 @@
+using Lzq.AgentForge.WebApi.Extensions;
 using Lzq.Core;
 using Lzq.Core.Json;
 using Lzq.Extensions.AI;
-using Lzq.Extensions.AI.AgentSkills;
 using Lzq.Extensions.EventBus;
 using Lzq.Extensions.EventBus.RabbitMq;
 using Lzq.Extensions.ExternalHttpApi;
@@ -10,7 +10,6 @@ using Lzq.Extensions.NSwag;
 using Lzq.Extensions.Redis;
 using Lzq.Extensions.Serilog;
 using Lzq.Extensions.SqlSugar;
-using Lzq.MES.WebApi.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -77,8 +76,7 @@ builder.Services.AddLzqJwt(builder.Configuration, options =>
 });
 
 builder.Services.AddLzqAI()
-    .AddSqlSugarChatHistoryProvider()
-    .AddLzqAgentSkills();
+    .AddSqlSugarChatHistoryProvider();
 
 // ============================================================
 // 8. NSwag (Swagger) 文档 + UI 密码保护

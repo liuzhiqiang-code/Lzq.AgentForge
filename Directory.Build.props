@@ -1,6 +1,6 @@
 <Project>
 	<PropertyGroup>
-		<LzqExtensionsVersion>0.2.0</LzqExtensionsVersion>
+		<LzqExtensionsVersion>0.2.7</LzqExtensionsVersion>
 		<MASAFrameworkVersion>1.2.0-preview.10</MASAFrameworkVersion>
 		<MicrosoftPackageVersion>10.*</MicrosoftPackageVersion>
 	</PropertyGroup>

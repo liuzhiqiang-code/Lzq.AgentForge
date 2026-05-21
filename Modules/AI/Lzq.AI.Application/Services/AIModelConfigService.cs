@@ -24,7 +24,7 @@ public class AIModelConfigService : ServiceBase, IAIModelConfigService
         Configuration.GetSection("AesKey").Get<string>() ?? ""
         ));
     private IConfiguration Configuration => GetRequiredService<IConfiguration>();
-    private IAIAgentService AIAgentService => GetRequiredService<IAIAgentService>();
+    private IAIAgentRunner AIAgentRunner => GetRequiredService<IAIAgentRunner>();
     private IModelConfigRepository ModelConfigRepository => GetRequiredService<IModelConfigRepository>();
     private IApiKeyRepository ApiKeyRepository => GetRequiredService<IApiKeyRepository>();
 
@@ -95,11 +95,11 @@ public class AIModelConfigService : ServiceBase, IAIModelConfigService
                 Model = command.DisplayModelName,
                 KeySecret = AesUtils.Decrypt(apiKey.KeyValue, AesKey, apiKey.KeyIv)
             };
-            var agent = AIAgentService.CreateAIAgent(setting, new AIAgentModel
+            var agentModel = new AIAgentModel
             {
                 Name = "测试链接"
-            });
-            var (content, _) = await AIAgentService.RunAsync(agent, "Ping");
+            };
+            var (content, _) = await AIAgentRunner.RunAsync(setting, agentModel, "Ping");
         }
         catch (Exception)
         {

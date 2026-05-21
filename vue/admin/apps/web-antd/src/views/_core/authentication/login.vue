@@ -51,17 +51,22 @@ const formSchema = computed((): VbenFormSchema[] => {
       },
       dependencies: {
         trigger(values, form) {
-          if (values.selectAccount) {
-            const findUser = MOCK_USER_OPTIONS.find(
-              (item) => item.value === values.selectAccount,
-            );
-            if (findUser) {
-              form.setValues({
-                password: '123456',
-                username: findUser.value,
-              });
-            }
-          }
+            // 默认值
+            form.setValues({
+              password: '123456',
+              username: 'admin',
+            });
+          // if (values.selectAccount) {
+          //   const findUser = MOCK_USER_OPTIONS.find(
+          //     (item) => item.value === values.selectAccount,
+          //   );
+          //   if (findUser) {
+          //     form.setValues({
+          //       password: '123456',
+          //       username: findUser.value,
+          //     });
+          //   }
+          // }
         },
         triggerFields: ['selectAccount'],
       },

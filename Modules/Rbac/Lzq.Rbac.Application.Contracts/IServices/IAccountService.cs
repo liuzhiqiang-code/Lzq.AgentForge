@@ -6,7 +6,7 @@ namespace Lzq.Rbac.Application.Contracts.IServices;
 
 public interface IAccountService : ITransientDependency
 {
-    Task<ApiResult<TokenViewDto>> LoginAsync(LoginCommand command);
+    Task<ApiResult<TokenResult>> LoginAsync(LoginCommand command);
     Task<ApiResult> RegisterAsync(RegisterCommand command);
     Task<ApiResult> LogoutAsync();
     Task<ApiResult> UserInfoAsync();

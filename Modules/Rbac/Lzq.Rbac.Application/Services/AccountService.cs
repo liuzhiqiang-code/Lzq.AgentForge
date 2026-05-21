@@ -25,14 +25,14 @@ public class AccountService : ServiceBase, IAccountService
 {
     public AccountService() : base("/api/v1/rbac/account") { }
     private IUserRepository UserRepository => GetRequiredService<IUserRepository>();
-    private IJwtService JwtService => GetRequiredService<IJwtService>();
+    private ITokenGenerator TokenGenerator => GetRequiredService<ITokenGenerator>();
     private ICurrentUser CurrentUser => GetRequiredService<ICurrentUser>();
     private IAuthApi AuthApi => GetRequiredService<IAuthApi>();
 
 
     [OpenApiTag("rbac/account"), OpenApiOperation("登录", ""), AllowAnonymous]
     [RoutePattern(pattern: "login", true)]
-    public async Task<ApiResult<TokenViewDto>> LoginAsync([FromBody] LoginCommand command)
+    public async Task<ApiResult<TokenResult>> LoginAsync([FromBody] LoginCommand command)
     {
         var user = await UserRepository.GetFirstAsync(a => a.UserName.Equals(command.UserName));
         if (user == null)
@@ -40,7 +40,7 @@ public class AccountService : ServiceBase, IAccountService
         if (!user.Password.Equals(command.Password))
             throw new MasaException("密码错误");
 
-        TokenViewDto? result;
+        TokenResult? result;
         if (false)//微服务
             result = await AuthApi.Login(new UserLoginDto(command.UserName!, command.Password!));
         else
@@ -53,7 +53,7 @@ public class AccountService : ServiceBase, IAccountService
                 .SetTenantId("")//暂时不管租户
                 .SetRoles(user.Roles);
 
-            result = JwtService.GenerateToken(currentUser, TimeSpan.FromHours(2));
+            result = TokenGenerator.Generate(currentUser, TimeSpan.FromHours(2));
         }
 
         if (result == null)

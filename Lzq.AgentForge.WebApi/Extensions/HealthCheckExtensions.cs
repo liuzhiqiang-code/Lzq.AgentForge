@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using System.Diagnostics;
 
-namespace Lzq.MES.WebApi.Extensions;
+namespace Lzq.AgentForge.WebApi.Extensions;
 
 /// <summary>
 /// 健康检查扩展

@@ -13,8 +13,30 @@ import { Dropdown, Menu, MenuItem, Input, message } from 'ant-design-vue'
 import { preferences } from '@vben/preferences'
 
 // ==================== 扩展消息类型 ====================
+type TimelineSegment =
+  | { type: 'thinking'; content: string; collapsed: boolean }
+  | { type: 'message'; content: string }
+  | { type: 'tool'; callId: string; toolName: string; arguments?: string; result?: string; status: 'running' | 'done'; collapsed: boolean }
+
 interface ExtendedMessage extends ChatsApi.ChatsHistory {
   errorContent?: string
+  segments?: TimelineSegment[]  // 按时间线穿插
+}
+
+// ==================== 思考或工具展开 ====================
+const toggleCollapsed = (obj: any) => {
+  obj.collapsed = !obj.collapsed
+  //scrollToBottom()
+}
+
+// ==================== 工具方法 ====================
+const formatToolJson = (raw: string) => {
+  try {
+    const parsed = JSON.parse(raw)
+    return JSON.stringify(parsed, null, 2)
+  } catch {
+    return raw
+  }
 }
 
 // ==================== 全局配置和工具 ====================
@@ -212,7 +234,16 @@ watch(inputText, () => {
   nextTick(() => adjustHeight())
 })
 
-watch(messages, () => scrollToBottom(), { deep: true })
+watch(messages, () => {
+  // 只有用户已经在底部附近时才自动滚动
+  if (scrollContainer.value) {
+    const { scrollTop, scrollHeight, clientHeight } = scrollContainer.value
+    const isNearBottom = scrollHeight - scrollTop - clientHeight < 100
+    if (isNearBottom) {
+      scrollToBottom()
+    }
+  }
+}, { deep: true })
 
 // ==================== 方法：发送消息与流处理 ====================
 const sendMessage = async () => {
@@ -228,7 +259,13 @@ const sendMessage = async () => {
   })
 
   const aiMsgId = userMsgId + 1
-  messages.value.push({ id: aiMsgId, role: 'assistant', content: '' } as ExtendedMessage)
+  const aiMsg: ExtendedMessage = {
+    id: aiMsgId,
+    role: 'assistant',
+    content: '',
+    segments: [],
+  }
+  messages.value.push(aiMsg)
 
   try {
     const response = await fetch(`${apiURL}/ai/chats/completion`, {
@@ -249,42 +286,102 @@ const sendMessage = async () => {
 
     const reader = response.body.getReader()
     const decoder = new TextDecoder()
+    let buffer = ''
 
     while (true) {
       const { value, done } = await reader.read()
       if (done) break
 
-      const chunk = decoder.decode(value, { stream: true })
-      const lines = chunk.split('\n\n')
+      buffer += decoder.decode(value, { stream: true })
+      const lines = buffer.split('\n')
+      buffer = lines.pop() || ''
 
       for (const line of lines) {
-        if (!line.trim()) continue
+        const trimmedLine = line.trim()
+        if (!trimmedLine) continue
 
-        if (line.startsWith('message:')) {
-          const jsonStr = line.replace('message:', '').trim()
-          try {
-            const data = JSON.parse(jsonStr)
-            if (data.v && typeof data.v === 'string') {
-              const aiMsg = messages.value.find((m) => m.id === aiMsgId)
-              if (aiMsg) aiMsg.content += data.v
-            }
-          } catch (e) {
-            console.error('解析消息失败', e)
-          }
+        const colonIndex = trimmedLine.indexOf(':')
+        if (colonIndex === -1) continue
+
+        const type = trimmedLine.substring(0, colonIndex).trim()
+        const jsonStr = trimmedLine.substring(colonIndex + 1).trim()
+
+        let data: any
+        try {
+          data = JSON.parse(jsonStr)
+        } catch {
+          continue
         }
 
-        if (line.startsWith('aiChats:')) {
-          const jsonStr = line.replace('aiChats:', '').trim()
-          try {
-            const data = JSON.parse(jsonStr)
+        const msg = messages.value.find((m) => m.id === aiMsgId) as ExtendedMessage
+        if (!msg) continue
+        if (!msg.segments) msg.segments = []
+
+        switch (type) {
+          case 'thinking': {
+            const content = data.v || ''
+            if (!content) break
+            // 合并到最后一个 thinking 段
+            const last = msg.segments[msg.segments.length - 1]
+            if (last && last.type === 'thinking') {
+              last.content += content
+            } else {
+              msg.segments.push({ type: 'thinking', content, collapsed: true })
+            }
+            break
+          }
+
+          case 'message': {
+            if (data.p === 'response/status') break
+            const content = data.v || ''
+            if (!content) break
+            // 合并到最后一个 message 段
+            const last = msg.segments[msg.segments.length - 1]
+            if (last && last.type === 'message') {
+              last.content += content
+            } else {
+              msg.segments.push({ type: 'message', content })
+            }
+            break
+          }
+
+          case 'tool_start': {
+            msg.segments.push({
+              type: 'tool',
+              callId: data.callId || '',
+              toolName: data.toolName || 'unknown',
+              arguments: data.toolArgs || '',
+              status: 'running',
+              collapsed: true,
+            })
+            break
+          }
+
+          case 'tool_end': {
+             // 修复：增加类型守卫，安全访问 callId
+            const targetCallId = data.callId;
+            for (let i = msg.segments.length - 1; i >= 0; i--) {
+              const seg = msg.segments[i];
+              if (seg?.type === 'tool' && seg.callId === targetCallId && seg.status === 'running') {
+                seg.result = data.toolResult || '';
+                seg.status = 'done';
+                break;
+              }
+            }
+            break;
+          }
+
+          case 'error': {
+            const content = data.v || ''
+            if (content) msg.errorContent = (msg.errorContent || '') + content
+            break
+          }
+
+          case 'aiChats': {
             if (data.content) {
               currentTitle.value = data.content
               if (currentChats.value)
-                currentChats.value = {
-                  id: data.chatId,
-                  title: data.content,
-                }
-
+                currentChats.value = { id: data.chatId, title: data.content }
               const histItem = history.value.find((h) => h.id == data.chatId)
               if (histItem) {
                 histItem.title = data.content
@@ -297,27 +394,13 @@ const sendMessage = async () => {
                 })
               }
             }
-          } catch (e) {}
-        }
-
-        // 改动点：error 流式内容存储到 errorContent 字段
-        if (line.startsWith('error:')) {
-          const jsonStr = line.replace('error:', '').trim()
-          try {
-            const data = JSON.parse(jsonStr)
-            if (data.v && typeof data.v === 'string') {
-              const aiMsg = messages.value.find((m) => m.id === aiMsgId)
-              if (aiMsg) {
-                aiMsg.errorContent = (aiMsg.errorContent || '') + data.v
-              }
-            }
-          } catch (e) {
-            console.error('解析错误消息失败', e)
+            break
           }
-        }
 
-        if (line.startsWith('close:')) {
-          console.log('AI 响应结束')
+          case 'close': {
+            console.log('AI 响应结束')
+            break
+          }
         }
       }
     }
@@ -585,12 +668,58 @@ onUnmounted(() => window.removeEventListener('click', handleOutsideClick))
                     ? { backgroundColor: 'var(--accent)', boxShadow: '0 10px 15px -3px var(--accent-shadow)' }
                     : { backgroundColor: 'var(--bg-bubble-ai)', borderColor: 'var(--border-color)', color: 'var(--text-bubble-ai)' }"
                 >
-                  <!-- 区分普通消息与错误消息 -->
-                  <div v-if="msg.role === 'assistant'">
-                    <!-- 正常内容 -->
-                    <div v-if="msg.content" class="markdown-body" v-html="md.render(msg.content)"></div>
-                    <!-- 加载状态（无内容且无错误） -->
-                    <span v-else-if="!msg.errorContent" class="animate-pulse">...</span>
+                  <!-- AI 消息渲染 (改动：调整结构，增加思考区和工具调用区) -->
+                  <div v-if="msg.role === 'assistant'" class="w-full">
+                    <!-- 🆕 时间线段：按流式顺序渲染 -->
+                    <template v-for="(seg, idx) in (msg.segments || [])" :key="idx">
+                      
+                      <!-- 思考 -->
+                      <div v-if="seg.type === 'thinking' && seg.content" class="thinking-block">
+                        <button class="thinking-toggle" @click="toggleCollapsed(seg)">
+                          <svg :class="['thinking-chevron', !seg.collapsed && 'rotated']" viewBox="0 0 16 16" fill="currentColor" width="12" height="12">
+                            <path d="M6 4l4 4-4 4" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/>
+                          </svg>
+                          <span class="thinking-label">深度思考</span>
+                        </button>
+                        <div v-show="!seg.collapsed" class="thinking-content">{{ seg.content }}</div>
+                      </div>
+
+                      <!-- 工具调用 -->
+                      <div v-else-if="seg.type === 'tool'" class="tool-block" :class="seg.status">
+                        <button class="tool-toggle" @click="toggleCollapsed(seg)">
+                          <svg :class="['tool-chevron', !seg.collapsed && 'rotated']" viewBox="0 0 16 16" fill="currentColor" width="10" height="10">
+                            <path d="M6 4l4 4-4 4" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/>
+                          </svg>
+                          <svg class="tool-icon" viewBox="0 0 16 16" fill="currentColor" width="12" height="12">
+                            <path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1v-1z"/>
+                            <path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3z"/>
+                          </svg>
+                          <span class="tool-name">{{ seg.toolName }}</span>
+                          <span v-if="seg.status === 'running'" class="tool-spinner"></span>
+                          <svg v-else-if="seg.status === 'done'" class="tool-done" viewBox="0 0 16 16" fill="currentColor" width="12" height="12">
+                            <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+                            <path d="M10.97 4.97a.235.235 0 0 0-.02.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-1.071-1.05z"/>
+                          </svg>
+                        </button>
+                        <div v-show="!seg.collapsed" class="tool-detail">
+                          <div v-if="seg.arguments" class="tool-section">
+                            <span class="tool-section-label">参数</span>
+                            <pre class="tool-pre">{{ formatToolJson(seg.arguments) }}</pre>
+                          </div>
+                          <div v-if="seg.result" class="tool-section">
+                            <span class="tool-section-label">结果</span>
+                            <pre class="tool-pre">{{ formatToolJson(seg.result) }}</pre>
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- 正文 -->
+                      <div v-else-if="seg.type === 'message' && seg.content" class="markdown-body" v-html="md.render(seg.content)"></div>
+                    </template>
+
+                    <!-- 加载状态（无 segments 且无错误） -->
+                    <span v-if="!msg.errorContent && (!msg.segments || msg.segments.length === 0)" class="animate-pulse">...</span>
+
                     <!-- 错误内容块 -->
                     <div v-if="msg.errorContent" class="error-block">
                       <svg class="error-icon" viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
@@ -600,6 +729,7 @@ onUnmounted(() => window.removeEventListener('click', handleOutsideClick))
                     </div>
                   </div>
 
+                  <!-- 原有：用户消息 -->
                   <div v-else class="whitespace-pre-wrap break-words">
                     {{ msg.content }}
                   </div>
@@ -616,7 +746,7 @@ onUnmounted(() => window.removeEventListener('click', handleOutsideClick))
         </div>
       </section>
 
-      <!-- 底部输入区 -->
+      <!-- 底部输入区（无改动） -->
       <footer
         class="flex-shrink-0 p-6"
         style="background: linear-gradient(to top, var(--bg-primary), var(--bg-primary), transparent)"
@@ -1010,5 +1140,154 @@ textarea {
   flex-shrink: 0;
   margin-top: 2px;
   color: var(--error-icon);
+}
+
+/* ==================== 🆕 新增：思考区样式 ==================== */
+.thinking-block {
+  margin-bottom: 4px;
+}
+
+.thinking-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 4px 0;
+  width: 100%;
+  transition: opacity 0.2s;
+}
+.thinking-toggle:hover {
+  opacity: 0.8;
+}
+
+.thinking-chevron {
+  transition: transform 0.2s ease;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+.thinking-chevron.rotated {
+  transform: rotate(90deg);
+}
+
+.thinking-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.thinking-content {
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.6;
+  padding: 8px 12px;
+  margin-top: 2px;
+  background: var(--bg-hover);
+  border-radius: 8px;
+  border-left: 2px solid var(--accent);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* ==================== 🆕 新增：工具调用区样式 ==================== */
+.tool-block {
+  margin-bottom: 4px;
+}
+
+.tool-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 4px 0;
+  width: 100%;
+  transition: opacity 0.2s;
+}
+.tool-toggle:hover {
+  opacity: 0.8;
+}
+
+.tool-chevron {
+  transition: transform 0.2s ease;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+.tool-chevron.rotated {
+  transform: rotate(90deg);
+}
+
+.tool-icon {
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+.tool-name {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  letter-spacing: 0.3px;
+}
+
+.tool-spinner {
+  width: 10px;
+  height: 10px;
+  border: 1.5px solid var(--text-muted);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  flex-shrink: 0;
+}
+
+.tool-done {
+  color: #52c41a;
+  flex-shrink: 0;
+}
+
+.tool-detail {
+  margin-top: 2px;
+  padding: 8px 10px;
+  background: var(--bg-hover);
+  border-radius: 8px;
+  border-left: 2px solid var(--accent);
+}
+
+.tool-section {
+  margin-bottom: 6px;
+}
+.tool-section:last-child {
+  margin-bottom: 0;
+}
+
+.tool-section-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.tool-pre {
+  font-size: 10px;
+  font-family: 'Fira Code', 'Cascadia Code', monospace;
+  color: var(--text-secondary);
+  background: var(--bg-secondary);
+  padding: 6px 8px;
+  border-radius: 6px;
+  overflow-x: auto;
+  max-height: 160px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 </style>

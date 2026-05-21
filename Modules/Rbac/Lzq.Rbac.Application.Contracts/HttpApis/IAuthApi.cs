@@ -8,7 +8,7 @@ namespace Lzq.Rbac.Application.Contracts.HttpApis;
 public interface IAuthApi : IExternalHttpApi
 {
     [HttpGet]
-    Task<TokenViewDto> Login(UserLoginDto userLoginDto);
+    Task<TokenResult> Login(UserLoginDto userLoginDto);
 
     [HttpGet]
     Task<UserInfoViewDto> GetUserInfo();

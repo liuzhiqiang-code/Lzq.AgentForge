@@ -55,8 +55,8 @@ export function useSchema(): VbenFormSchema[] {
       component: 'Switch',
       componentProps: {
         class: 'w-auto',
-        checkedValue: 1,                     // 选中时的值
-        unCheckedValue: 0,                   // 未选中时的值
+        //checkedValue: 1,                     // 选中时的值
+        //unCheckedValue: 0,                   // 未选中时的值
       },
       fieldName: 'isEnabled',
       label: $t('ai.modelConfig.isEnabled'),

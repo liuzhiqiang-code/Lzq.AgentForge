@@ -17,15 +17,16 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using NSwag.Annotations;
+using OpenTelemetry.Trace;
 using SqlSugar;
 using System.ClientModel;
 using System.Diagnostics;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Text.Json;
 
 namespace Lzq.AI.Application.Services;
 
@@ -36,8 +37,7 @@ public class ChatsService : ServiceBase, IChatsService
     private IConfiguration Configuration => GetRequiredService<IConfiguration>();
     private HttpContext HttpContext => GetRequiredService<IHttpContextAccessor>().HttpContext!;
     private ICurrentUser CurrentUser => GetRequiredService<ICurrentUser>();
-    private IChatClientService ChatClientService => GetRequiredService<IChatClientService>();
-    private IAIAgentService AIAgentService => GetRequiredService<IAIAgentService>();
+    private IAIAgentRunner AIAgentRunner => GetRequiredService<IAIAgentRunner>();
     private ApiKeyService ApiKeyService => GetRequiredService<ApiKeyService>();
     private AgentManageService AgentManageService => GetRequiredService<AgentManageService>();
     private ILogger<ChatsService> Logger => GetRequiredService<ILogger<ChatsService>>();
@@ -70,7 +70,6 @@ public class ChatsService : ServiceBase, IChatsService
         return ApiResult.Success(list.Map<List<ChatsViewDto>>());
     }
 
-
     [OpenApiTag("ai/chats"), OpenApiOperation("获取对话历史消息", "")]
     [RoutePattern(pattern: "history/{id}", true)]
     public async Task<ApiResult> HistoryListAsync(long id)
@@ -79,11 +78,148 @@ public class ChatsService : ServiceBase, IChatsService
             .Where(a => a.Id.Equals(id)).FirstAsync();
         if (data == null)
             return ApiResult.Fail("未找到对话消息", 400);
+
         var chatHistorys = await ChatsRepository.AsSugarClient().Queryable<AIChatHistoryEntity>()
             .Where(a => data.SessionId.Equals(a.SessionId))
             .OrderBy(a => a.CreationTime)
             .ToListAsync();
-        return ApiResult.Success(chatHistorys.Map<List<ChatHistoryViewDto>>());
+
+        // 分组：同一轮对话的 assistant + tool 合并到一起
+        var dtos = GroupMessages(chatHistorys);
+
+        return ApiResult.Success(dtos);
+    }
+
+    private List<ChatHistoryViewDto> GroupMessages(List<AIChatHistoryEntity> messages)
+    {
+        var result = new List<ChatHistoryViewDto>();
+        List<AIChatHistoryEntity>? currentGroup = null;   // 一轮消息是一次user+ assistant/tool的组合，到下一个user成一个新的组合
+
+        foreach (var msg in messages)
+        {
+            if (msg.Role == "user")
+            {
+                // 先关闭上一组
+                if (currentGroup != null)
+                {
+                    result.Add(BuildAssistantDto(currentGroup));
+                    currentGroup = null;
+                }
+
+                // 用户消息直接添加
+                result.Add(new ChatHistoryViewDto
+                {
+                    Id = msg.Id,
+                    Role = "user",
+                    Content = msg.Content!.FirstOrDefault()?.Content ??"",
+                    Segments = null
+                });
+            }
+            else if (msg.Role is "assistant" or "tool")
+            {
+                // 收集到当前组
+                currentGroup ??= new List<AIChatHistoryEntity>();
+                currentGroup.Add(msg);
+            }
+        }
+
+        // 最后一组
+        if (currentGroup != null)
+        {
+            result.Add(BuildAssistantDto(currentGroup));
+        }
+
+        return result;
+    }
+
+    private ChatHistoryViewDto BuildAssistantDto(List<AIChatHistoryEntity> group)
+    {
+        // 取第一条 assistant 的 Id
+        var firstAssistant = group.FirstOrDefault(m => m.Role == "assistant");
+        var dto = new ChatHistoryViewDto
+        {
+            Id = firstAssistant?.Id ?? group[0].Id,
+            Role = "assistant",
+            Content = string.Concat(group.Where(m => m.Role == "assistant").Select(m => m.Content)),
+            Segments = BuildSegments(group)
+        };
+
+        return dto;
+    }
+
+    private List<TimelineSegmentDto>? BuildSegments(List<AIChatHistoryEntity> group)
+    {
+        var segments = new List<TimelineSegmentDto>();
+        var toolCallMap = new Dictionary<string, TimelineSegmentDto>();
+
+        foreach (var msg in group)
+        {
+            if (msg == null || msg.Content == null || !msg.Content.Any()) continue;
+
+            var eventArgs = msg.Content!;
+            foreach (var item in eventArgs)
+            {
+
+                switch (item.EventType)
+                {
+                    case StreamingEventType.Thinking:
+                        segments.Add(new TimelineSegmentDto
+                        {
+                            Type = "thinking",
+                            Content = item.Content,
+                            Collapsed = true
+                        });
+                        break;
+                    case StreamingEventType.TextChunk:
+                        segments.Add(new TimelineSegmentDto
+                        {
+                            Type = "message",
+                            Content = item.Content
+                        });
+                        break;
+                    case StreamingEventType.ToolCallStart:
+                        var toolSeg = new TimelineSegmentDto
+                        {
+                            Type = "tool",
+                            CallId = item.CallId,
+                            ToolName = item.ToolName,
+                            Arguments = item.ToolArguments,
+                            Status = "running",
+                            Collapsed = true
+                        };
+                        segments.Add(toolSeg);
+                        if (!string.IsNullOrEmpty(item.CallId))
+                        {
+                            toolCallMap[item.CallId] = toolSeg; // 记录以便 tool_end 时查找
+                        }
+                        break;
+                    case StreamingEventType.ToolCallEnd:
+                        // 查找对应的 tool_start 并更新状态
+                        if (!string.IsNullOrEmpty(item.CallId) && toolCallMap.TryGetValue(item.CallId, out var runningTool))
+                        {
+                            runningTool.Status = "done";
+                            runningTool.Result = item.ToolResult;
+                        }
+                        else
+                        {
+                            // 如果找不到对应的 start，就作为独立的 tool 段
+                            segments.Add(new TimelineSegmentDto
+                            {
+                                Type = "tool",
+                                CallId = item.CallId,
+                                ToolName = item.ToolName,
+                                Result = item.ToolResult,
+                                Status = "done",
+                                Collapsed = true
+                            });
+                        }
+                        break;
+                    default: break;
+                }
+            }
+        }
+
+        return segments.Count > 0 ? segments : null;
     }
 
     [OpenApiTag("ai/chats"), OpenApiOperation("获取可用模型", "")]
@@ -231,9 +367,9 @@ public class ChatsService : ServiceBase, IChatsService
         ChatsCompletionRequest input, AISetting aiSetting, AIAgentModel agentModel, CancellationToken ct)
     {
         ChatsEntity chat;
-        if (input.AIChatsId.HasValue && input.AIChatsId.Value > 0)
+        if (input.ChatsId.HasValue && input.ChatsId.Value > 0)
         {
-            chat = await ChatsRepository.GetFirstAsync(a => a.Id == input.AIChatsId.Value);
+            chat = await ChatsRepository.GetFirstAsync(a => a.Id == input.ChatsId.Value);
             if (chat == null)
             {
                 // 传入的 ID 无效，按新建处理（避免异常）
@@ -289,18 +425,32 @@ public class ChatsService : ServiceBase, IChatsService
         var stopwatch = Stopwatch.StartNew();
         try
         {
-            IChatClient chatClient = ChatClientService.GetChatClient(aiSetting);
-            var agent = AIAgentService.CreateAIAgent(chatClient, agentModel);
             string? sessionDbKey = null;
             if (!chatsEntity.SessionId.IsNullOrWhiteSpace())
                 sessionDbKey = chatsEntity.SessionId;
 
-            (var fullContent, sessionDbKey) = await AIAgentService.RunStreamingAsync(
-                agent, input.Prompt,
-                async chunk =>
+            (var fullContent, sessionDbKey) = await AIAgentRunner.RunStreamingAsync(
+                aiSetting,
+                agentModel,
+                input.Prompt,
+                async args =>
                 {
                     // SSE 标准输出
-                    await WriteSseEventAsync("message", new { v = chunk });
+                    await WriteSseEventAsync(args.EventType switch
+                    {
+                        StreamingEventType.Thinking => "thinking",
+                        StreamingEventType.TextChunk => "message",
+                        StreamingEventType.ToolCallStart => "tool_start",
+                        StreamingEventType.ToolCallEnd => "tool_end",
+                        _ => "unknown"
+                    }, new
+                    {
+                        v = args.Content,
+                        toolName = args.ToolName,
+                        toolArgs = args.ToolArguments,
+                        toolResult = args.ToolResult,
+                        callId = args.CallId
+                    });
                 }, sessionDbKey);
             chatsEntity.SessionId = sessionDbKey;
 
@@ -343,12 +493,11 @@ public class ChatsService : ServiceBase, IChatsService
         var stopwatch = Stopwatch.StartNew();
         try
         {
-            var agent = AIAgentService.CreateAIAgent(setting, AgentConst.TITLE);
-            var (content, _) = await AIAgentService.RunAsync(agent, prompt);
+            var (content, _) = await AIAgentRunner.RunAsync(setting, AgentConst.TITLE, prompt);
 
             entity.ChatClient = setting.ConfigId;
             entity.AIAgentModel = AgentConst.TITLE;
-            entity.AIAgentName = agent.Name;
+            entity.AIAgentName = AgentConst.TITLE.Name;
             entity.Instructions = AgentConst.TITLE.ChatOptions?.Instructions ?? "";
             entity.Prompt = prompt;
 

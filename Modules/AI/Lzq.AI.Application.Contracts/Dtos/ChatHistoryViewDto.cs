@@ -8,4 +8,6 @@ public class ChatHistoryViewDto
 
     public string Content { get; set; }
 
+    public List<TimelineSegmentDto>? Segments { get; set; }
+
 }
