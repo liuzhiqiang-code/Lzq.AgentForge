@@ -6,8 +6,8 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
-  <ItemGroup>
-	  <PackageReference Include="Lzq.Extensions.SqlSugar" Version="$(LzqExtensionsVersion)" />
-  </ItemGroup>
+    <ItemGroup>
+        <PackageReference Include="Lzq.Extensions.SqlSugar" Version="$(LzqExtensionsVersion)" />
+    </ItemGroup>
 
 </Project>

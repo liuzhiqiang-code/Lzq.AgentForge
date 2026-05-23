@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import MarkdownIt from 'markdown-it'
 import type { ExtendedMessage } from '../types'
+import ChartBlock from './chartBlock.vue'
 
 defineProps<{
   msg: ExtendedMessage
@@ -46,10 +47,11 @@ const md = new MarkdownIt({
 
       <!-- 气泡内容 -->
       <div :class="['flex flex-col min-w-0', msg.role === 'user' ? 'items-end' : 'items-start']">
-        <div :class="['text-[14px] leading-[1.7] py-3 px-5 transition-all relative', msg.role === 'user' ? 'text-white rounded-2xl rounded-tr-none shadow-lg' : 'rounded-2xl rounded-tl-none border']"
+        <div
+          :class="['text-[14px] leading-[1.7] py-3 px-5 transition-all relative', msg.role === 'user' ? 'rounded-2xl rounded-tr-none shadow-lg' : 'rounded-2xl rounded-tl-none border']"
           :style="msg.role === 'user'
-            ? { backgroundColor: 'var(--accent)', boxShadow: '0 10px 15px -3px var(--accent-shadow)' }
-            : { backgroundColor: 'var(--bg-bubble-ai)', borderColor: 'var(--border-color)', color: 'var(--text-bubble-ai)' }">
+            ? { backgroundColor: 'var(--user-msg-bg)', color: 'var(--user-msg-text)', boxShadow: '0 10px 15px -3px var(--user-msg-shadow)' }
+            : { backgroundColor: 'var(--bg-bubble-ai)', borderColor: 'var(--border-color)', color: 'var(--text-bubble-ai)', boxShadow: '0 2px 6px rgba(0,0,0,0.1)' }">
 
           <!-- AI 消息渲染 -->
           <div v-if="msg.role === 'assistant'" class="w-full">
@@ -97,12 +99,24 @@ const md = new MarkdownIt({
                 </div>
               </div>
 
+                <!-- ========== 图表显示 ========== -->
+              <div v-else-if="seg.type === 'echarts' && (seg.status === 'loading' || seg.chartOption)" 
+                class="chart-wrapper">
+                <ChartBlock
+                  :option="seg.chartOption"
+                  :status="seg.status"
+                  :title="seg.title"
+                  :collapsed="seg.collapsed"
+                  @toggle="toggleCollapsed(seg)"
+                />
+              </div>
+
               <!-- 正文 -->
               <div v-else-if="seg.type === 'message' && seg.content" class="markdown-body" v-html="md.render(seg.content)"></div>
             </template>
 
             <!-- 加载状态 -->
-            <span v-if="!msg.errorContent && (!msg.segments || msg.segments.length === 0)" class="animate-pulse">...</span>
+            <span v-if="!msg.errorContent && (!msg.segments || msg.segments.length === 0)" class="loading-dots">...</span>
 
             <!-- 错误内容 -->
             <div v-if="msg.errorContent" class="error-block">
@@ -192,6 +206,12 @@ const md = new MarkdownIt({
   background: var(--bg-hover); border-radius: 8px; border-left: 2px solid var(--accent);
   white-space: pre-wrap; word-break: break-word;
 }
+.thinking-content, .tool-detail {
+  transition: opacity 0.2s, transform 0.2s;
+}
+.thinking-content[v-show="false"], .tool-detail[v-show="false"] {
+  display: none;
+}
 
 /* 工具调用区 */
 .tool-block { margin-bottom: 4px; }
@@ -233,4 +253,28 @@ const md = new MarkdownIt({
   color: var(--error-text); font-size: 13px; line-height: 1.5;
 }
 .error-icon { flex-shrink: 0; margin-top: 2px; color: var(--error-icon); }
+
+.chart-wrapper {
+  overflow-x: auto;
+  width: 100%;
+  min-width: 300px;   /* 保证最小宽度 */
+  max-width: 100%;    /* 突破气泡的 85% 限制 */
+}
+
+.loading-dots::after {
+  content: '';
+  animation: dots 1.5s steps(4, end) infinite;
+}
+@keyframes dots {
+  0%, 20% { content: ''; }
+  40% { content: '.'; }
+  60% { content: '..'; }
+  80%, 100% { content: '...'; }
+}
+
+.tool-block.running .tool-detail {
+  border-left-color: var(--accent);
+  background: rgba(9, 96, 189, 0.05);
+}
+
 </style>

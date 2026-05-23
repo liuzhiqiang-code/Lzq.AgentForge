@@ -9,7 +9,6 @@ using Lzq.AI.Domain.Entities;
 using Lzq.AI.Domain.IRepositories;
 using Lzq.Core.Interfaces;
 using Lzq.Core.Models;
-using Lzq.Core.Utils;
 using Lzq.Extensions.AI;
 using Lzq.Extensions.AI.Interfaces;
 using Lzq.Extensions.AI.Provider;
@@ -20,13 +19,13 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using NSwag.Annotations;
-using OpenTelemetry.Trace;
 using SqlSugar;
 using System.ClientModel;
 using System.Diagnostics;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace Lzq.AI.Application.Services;
 
@@ -45,6 +44,11 @@ public class ChatsService : ServiceBase, IChatsService
     private IModelRunRecordRepository ModelRunRecordRepository => GetRequiredService<IModelRunRecordRepository>();
     private IModelConfigRepository ModelConfigRepository => GetRequiredService<IModelConfigRepository>();
 
+    private static readonly JsonSerializerOptions _jsonOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+    };
 
     [OpenApiTag("ai/chats"), OpenApiOperation("获取分页列表", "")]
     [RoutePattern(pattern: "page", true)]
@@ -211,6 +215,47 @@ public class ChatsService : ServiceBase, IChatsService
                                 Result = item.ToolResult,
                                 Status = "done",
                                 Collapsed = true
+                            });
+                        }
+                        break;
+                    case StreamingEventType.EchartsStart:
+                        var echartsSeg = new TimelineSegmentDto
+                        {
+                            Type = "echarts",
+                            CallId = item.CallId,
+                            ToolName = item.ToolName,
+                            Arguments = item.ToolArguments,
+                            Status = "running",
+                            Collapsed = true
+                        };
+                        segments.Add(echartsSeg);
+                        if (!string.IsNullOrEmpty(item.CallId))
+                        {
+                            toolCallMap[item.CallId] = echartsSeg; // 记录以便 tool_end 时查找
+                        }
+                        break;
+                    case StreamingEventType.EchartsEnd:
+                        // 查找对应的 tool_start 并更新状态
+                        if (!string.IsNullOrEmpty(item.CallId) && toolCallMap.TryGetValue(item.CallId, out var runningEcharts))
+                        {
+                            runningEcharts.Status = "done";
+                            runningEcharts.Result = item.ToolResult;
+                            runningEcharts.ChartOption = string.IsNullOrEmpty(item.ToolResult) ? null :
+                                JsonSerializer.Deserialize<EchartsOption>(item.ToolResult,_jsonOptions);
+                        }
+                        else
+                        {
+                            // 如果找不到对应的 start，就作为独立的 tool 段
+                            segments.Add(new TimelineSegmentDto
+                            {
+                                Type = "echarts",
+                                CallId = item.CallId,
+                                ToolName = item.ToolName,
+                                Result = item.ToolResult,
+                                Status = "done",
+                                Collapsed = true,
+                                ChartOption = string.IsNullOrEmpty(item.ToolResult) ? null :
+                                    JsonSerializer.Deserialize<EchartsOption>(item.ToolResult, _jsonOptions)
                             });
                         }
                         break;
@@ -442,6 +487,8 @@ public class ChatsService : ServiceBase, IChatsService
                         StreamingEventType.TextChunk => "message",
                         StreamingEventType.ToolCallStart => "tool_start",
                         StreamingEventType.ToolCallEnd => "tool_end",
+                        StreamingEventType.EchartsStart => "echarts_start",
+                        StreamingEventType.EchartsEnd => "echarts_end",
                         _ => "unknown"
                     }, new
                     {
@@ -449,7 +496,9 @@ public class ChatsService : ServiceBase, IChatsService
                         toolName = args.ToolName,
                         toolArgs = args.ToolArguments,
                         toolResult = args.ToolResult,
-                        callId = args.CallId
+                        callId = args.CallId,
+                        chartOption = (!string.IsNullOrEmpty(args.ToolResult) && args.EventType == StreamingEventType.EchartsEnd) ?
+                            JsonSerializer.Deserialize<EchartsOption>(args.ToolResult,_jsonOptions) : null,
                     });
                 }, sessionDbKey);
             chatsEntity.SessionId = sessionDbKey;
@@ -538,7 +587,7 @@ public class ChatsService : ServiceBase, IChatsService
     private async Task WriteSseEventAsync(string eventName, object data)
     {
         // 将对象序列化为标准 JSON：{"v": "你好"}
-        var jsonString = System.Text.Json.JsonSerializer.Serialize(data);
+        var jsonString = System.Text.Json.JsonSerializer.Serialize(data, _jsonOptions);
         await HttpContext.Response.WriteAsync($"{eventName}: {jsonString}\n\n");
         await HttpContext.Response.Body.FlushAsync();
     }

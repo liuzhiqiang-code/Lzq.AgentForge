@@ -168,7 +168,22 @@ public class MenuSeedData : BaseSeedData<MenuEntity>
                             Icon = "mdi:key-outline",           // API密钥：钥匙
                             Title = "ai.apiKey.title"
                         }
-                    }
+                    },
+                    // 图表测试
+                    new MenuEntity
+                    {
+                        Id = 206,
+                        Name = "chartTest",
+                        Path = "/ai/chartTest",
+                        Component = "#/modules/ai/views/chats/chartTest.vue",
+                        Type = "menu",
+                        Status = EnableStatusEnum.Enabled,
+                        Meta = new MenuMeta
+                        {
+                            Icon = "mdi:chat-outline",          // 聊天：对话气泡
+                            Title = "ai.chartTest.title"
+                        }
+                    },
                 }
             },
 

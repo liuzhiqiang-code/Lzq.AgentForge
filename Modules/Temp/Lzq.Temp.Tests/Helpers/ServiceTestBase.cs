@@ -27,7 +27,6 @@ public abstract class ServiceTestBase : IDisposable
         Client = Db.Client;
 
         var services = new ServiceCollection();
-        services.AddMapster();
 
         services.AddSingleton<ISqlSugarRepository<TestConfigEntity>>(
             new SqlSugarRepository<TestConfigEntity>(Client));

@@ -68,8 +68,11 @@
     "keyName": "密钥名称",
     "keyValue": "API Key",
     "baseUrl": "base_url",
-    "selectModel":"选择模型",
+    "selectModel": "选择模型",
     "isEnabled": "是否启用",
     "isDeleted": "IsDeleted"
+  },
+  "chartTest": {
+    "title": "图标测试"
   }
 }

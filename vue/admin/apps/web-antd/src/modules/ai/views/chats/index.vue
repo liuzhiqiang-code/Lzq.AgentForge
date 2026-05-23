@@ -12,7 +12,7 @@ import VoiceInputButton from './modules/voice-input-button.vue'
 import ChatSidebar from './modules/chatSidebar.vue'
 import ChatMessage from './modules/chatMessage.vue'
 import ModelSelector from './modules/modelSelector.vue'
-import type { ExtendedMessage, HistoryItem } from './types'
+import type { StreamingEventArgs,ExtendedMessage, HistoryItem } from './types'
 
 // ========== 全局配置 ==========
 const { apiURL } = useAppConfig(import.meta.env, import.meta.env.PROD)
@@ -153,6 +153,7 @@ const historyClickHandle = async (item: HistoryItem) => {
   currentTitle.value = item.title
   currentAgent.value = { name: item.aiAgentName }
   messages.value = await getChatsHistory(item.id ?? '') as ExtendedMessage[]
+  await nextTick()
 }
 
 const newChatsHandle = () => {
@@ -300,9 +301,76 @@ const sendMessage = async () => {
             }
             break
           }
-          case 'chart': {
-            msg.segments.push({ type: 'chart', content: data.v || '', height: data.height })
-            break
+          // ========== 新增图表事件处理 ==========
+          case 'echarts_start': {
+            let title = '图表';
+            let chartType = '';
+            // 尝试从 toolArgs 解析实际参数
+            if ((data as any).toolArgs) {
+              try {
+                const argsObj = JSON.parse((data as any).toolArgs);
+                const args = argsObj?.arguments;
+                if (args) {
+                  title = args.title || title;
+                  chartType = args.chartType || '';
+                }
+              } catch {}
+            } else if (data.v) {
+              // 备用从 v 解析
+              try {
+                const vObj = JSON.parse(data.v);
+                title = vObj?.arguments?.title || vObj?.title || title;
+                chartType = vObj?.arguments?.chartType || '';
+              } catch {}
+            }
+            msg.segments.push({
+              type: 'echarts',
+              status: 'loading',
+              title,
+              chartType,
+              collapsed: false,
+              callId: data.callId,
+            });
+            break;
+          }
+          case 'echarts_end': {
+            const targetCallId = data.callId;
+            let option: Record<string, unknown> = {};
+
+            // 优先使用后端直接给的 chartOption 对象
+            if (data.chartOption && typeof data.chartOption === 'object') {
+              option = data.chartOption as Record<string, unknown>;
+            } else {
+              // 兼容旧格式：从 toolResult 或 v 中解析
+              const rawOption = (data as any).toolResult || data.v;
+              if (typeof rawOption === 'string') {
+                try { option = JSON.parse(rawOption) as Record<string, unknown>; } catch {}
+              } else if (typeof rawOption === 'object' && rawOption !== null) {
+                option = rawOption as Record<string, unknown>;
+              }
+            }
+
+            const segments = msg.segments ?? [];
+            const loadingSegment = segments.find(
+              seg => seg.type === 'echarts' && seg.status === 'loading' && seg.callId === targetCallId
+            ) as any;
+
+            if (loadingSegment) {
+              loadingSegment.status = 'done';
+              loadingSegment.chartOption = option;
+              loadingSegment.title = (option.title as any)?.text || loadingSegment.title;
+              loadingSegment.collapsed = loadingSegment.collapsed ?? false;
+            } else {
+              msg.segments = [...segments, {
+                type: 'echarts' as const,
+                status: 'done',
+                chartOption: option,
+                title: (option.title as any)?.text || '图表',
+                collapsed: false,
+                callId: targetCallId,
+              }];
+            }
+            break;
           }
           case 'error': {
             if (data.v) msg.errorContent = (msg.errorContent || '') + data.v
@@ -311,7 +379,7 @@ const sendMessage = async () => {
           case 'aiChats': {
             if (data.content) {
               currentTitle.value = data.content
-              if (!currentChats.value) 
+              if (currentChats.value?.id !== data.chatId)//id对不上，说明是新对话
                 currentChats.value = { id: data.chatId, title: data.content }
               const histItem = history.value.find(h => h.id == data.chatId)
               if (histItem) histItem.title = data.content
@@ -339,8 +407,7 @@ const sendMessage = async () => {
 
 <template>
   <div :class="['flex h-screen w-full overflow-hidden antialiased font-sans', isDark ? 'dark' : 'light']"
-    class="bg-[var(--bg-primary)] text-[var(--text-primary)]">
-    
+    class="bg-transparent text-[var(--text-primary)]">
     <ChatSidebar
       :grouped-history="groupedHistory"
       :current-title="currentTitle"
@@ -357,7 +424,7 @@ const sendMessage = async () => {
       @delete="deleteHistory"
     />
 
-    <main class="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
+    <main class="flex-1 flex flex-col min-w-0 h-full overflow-hidden bg-[var(--bg-primary)]">
       <header class="h-14 flex-shrink-0 flex items-center justify-center px-8 border-b"
         style="border-color: var(--border-light)">
         <div class="flex items-center gap-3 px-5 py-1.5 rounded-full border shadow-xl"
@@ -386,7 +453,7 @@ const sendMessage = async () => {
             style="background-color: var(--bg-input); border-color: var(--border-color);">
             <textarea ref="textareaRef" v-model="inputText"
               @keydown.enter.exact.prevent="sendMessage" placeholder="发送指令..."
-              class="w-full bg-transparent border-none px-6 py-4 resize-none text-[14px] placeholder-gray-600 custom-scrollbar-textarea focus:ring-1 focus:ring-[var(--accent)]"
+              class="w-full bg-transparent border-none px-6 py-4 resize-none text-[14px] placeholder:text-[var(--text-muted)] custom-scrollbar-textarea focus:ring-1 focus:ring-[var(--accent)]"
               style="color: var(--text-primary); min-height: 100px; max-height: 160px; outline: none;" />
 
             <div class="flex items-center justify-between px-4 py-3 border-t"
@@ -422,35 +489,38 @@ const sendMessage = async () => {
   </div>
 </template>
 
-<style>
-/* 保留原有的 CSS 变量定义（暗黑/白天模式） */
+<style scoped>
+
 .dark {
-  --bg-primary: #050505;
-  --bg-secondary: #161616;
-  --bg-sidebar: #0d0d0d;
-  --bg-hover: #1a1a1a;
-  --bg-input: #111;
-  --bg-input-footer: rgba(255, 255, 255, 0.01);
-  --bg-bubble-ai: #1a1a1a;
-  --bg-avatar: #161616;
-  --bg-selector: #1a1a1a;
-  --bg-dropdown: #1a1a1a;
-  --bg-disabled: #1a1a1a;
+  --bg-primary: #0f0f0f;
+  --bg-secondary: #1a1a1a;
+  --bg-sidebar: #141414;
+  --bg-hover: #252525;
+  --bg-input: #2a2a2a;
+  --bg-input-footer: rgba(255, 255, 255, 0.04);
+  --bg-bubble-ai: #252525;
+  --bg-avatar: #2a2a2a;
+  --bg-selector: #1f1f1f;
+  --bg-dropdown: #252525;
+  --bg-disabled: #2a2a2a;
   --text-primary: #e5e7eb;
   --text-secondary: #d1d5db;
   --text-tertiary: #9ca3af;
   --text-muted: #6b7280;
-  --text-bubble-ai: #cbd5e1;
-  --border-color: #262626;
-  --border-light: rgba(255, 255, 255, 0.02);
+  --text-bubble-ai: #e5e7eb;
+  --border-color: #2e2e2e;
+  --border-light: rgba(255, 255, 255, 0.06);
   --accent: #0960bd;
-  --accent-shadow: rgba(9, 96, 189, 0.2);
-  --header-bg: rgba(17, 17, 17, 0.6);
-  --group-title-bg: rgba(255, 255, 255, 0.03);
+  --accent-shadow: rgba(9, 96, 189, 0.25);
+  --header-bg: rgba(20, 20, 20, 0.8);
+  --group-title-bg: rgba(255, 255, 255, 0.04);
   --error-bg: #2d1617;
   --error-border: #5c2527;
   --error-text: #e8a4a4;
   --error-icon: #ff6b6b;
+  --user-msg-bg: #4a3a6e;   /* 深紫灰，柔和且与暗黑背景协调 */
+  --user-msg-text: #f0eef7; 
+  --user-msg-shadow: rgba(74, 58, 110, 0.3);
 }
 
 .light {
@@ -480,6 +550,9 @@ const sendMessage = async () => {
   --error-border: #ffccc7;
   --error-text: #cf1322;
   --error-icon: #ff4d4f;
+  --user-msg-bg: #e5f0ff;
+  --user-msg-text: #1e2a3a;
+  --user-msg-shadow: rgba(0, 0, 0, 0.1);
 }
 </style>
 

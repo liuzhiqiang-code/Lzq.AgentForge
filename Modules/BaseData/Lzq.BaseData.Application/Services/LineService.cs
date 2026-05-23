@@ -11,6 +11,7 @@ using NSwag.Annotations;
 using SqlSugar;
 using System.Collections;
 using Lzq.BaseData.Application.Contracts.Dtos;
+using Mapster;
 
 namespace Lzq.BaseData.Application.Services;
 

@@ -11,10 +11,10 @@ public class ModelConfigSeedData : BaseSeedData<ModelConfigEntity>
         {
             new ModelConfigEntity
             {
-                Id = 1,
+                Id = 807284909445189,
                 ApiKeyId = 1,
-                ConfigName = "deepseek-ai/DeepSeek-V4-Flash",
-                DisplayModelName = "deepseek-ai/DeepSeek-V4-Flash",
+                ConfigName = "MiniMaxM25",
+                DisplayModelName = "MiniMaxAI/MiniMax-M2.5",
                 IsEnabled = true
             }
         };

@@ -59,7 +59,6 @@ public abstract class ServiceTestBase : IDisposable
 
         // 4. 构建测试用 ServiceProvider，并注册 IHttpContextAccessor 模拟
         var services = new ServiceCollection();
-        services.AddMapster();
 
         // 注册所有仓储
         services.AddSingleton<IDashboardConfigRepository>(ConfigRepo);

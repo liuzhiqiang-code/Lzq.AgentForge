@@ -30,7 +30,7 @@ public class ApiKeySeedData : BaseSeedData<ApiKeyEntity>
                 Provider = Enums.ProviderEnum.SiliconFlow,
                 KeyName = "SiliconFlow.Pro",
                 KeyValue =keyValue,
-                KeyIv = "6baYT3lwQD9XylquKuZyuQ==",
+                KeyIv = ivString,
                 BaseUrl = "https://api.siliconflow.cn/v1",
                 IsEnabled = true,
             }

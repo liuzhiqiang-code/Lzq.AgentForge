@@ -52,7 +52,6 @@ public abstract class ServiceTestBase : IDisposable
         var services = new ServiceCollection();
 
         // 这里注入其他框架上的依赖，如 Mapster
-        services.AddMapster();
 
         // 注册所有仓储
         services.AddSingleton<IFactoryRepository>(FactoryRepo);

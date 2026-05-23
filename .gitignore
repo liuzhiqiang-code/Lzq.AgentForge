@@ -17,6 +17,8 @@ publish/
 # Node.js 依赖
 node_modules/
 
+uni_modules/
+
 # .NET NuGet 包目录
 packages/
 

@@ -9,9 +9,9 @@ namespace Lzq.AgentForge.WebApi.Extensions;
 /// </summary>
 public static class HealthCheckExtensions
 {
-    public static void AddLzqHealthChecks(this IHostApplicationBuilder builder)
+    public static void AddLzqHealthChecks(this IServiceCollection services)
     {
-        builder.Services.AddHealthChecks()
+        services.AddHealthChecks()
             .AddCheck("self", () => HealthCheckResult.Healthy("MES 服务运行正常"))
             .AddCheck<MemoryHealthCheck>("内存检查");
     }

@@ -10,6 +10,7 @@ using Lzq.BaseData.Domain.IRepositories;
 using NSwag.Annotations;
 using SqlSugar;
 using Lzq.BaseData.Application.Contracts.Dtos;
+using Mapster;
 
 namespace Lzq.BaseData.Application.Services;
 
@@ -119,7 +120,7 @@ public class WorkshopService : ServiceBase, IWorkshopService
             .AnyAsync(w => w.Code == command.Code && w.Id != command.Id);
         if (codeExists) throw new UserFriendlyException($"车间编码 [{command.Code}] 已被其他车间使用");
 
-        command.Map(entity);
+        command.Adapt(entity);
         await WorkshopRepo.UpdateAsync(entity);
         return ApiResult.Success(true);
     }
