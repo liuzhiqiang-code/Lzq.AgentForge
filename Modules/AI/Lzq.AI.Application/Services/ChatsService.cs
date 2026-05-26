@@ -42,6 +42,7 @@ public class ChatsService : ServiceBase, IChatsService
     private ILogger<ChatsService> Logger => GetRequiredService<ILogger<ChatsService>>();
     private IChatsRepository ChatsRepository => GetRequiredService<IChatsRepository>();
     private IModelRunRecordRepository ModelRunRecordRepository => GetRequiredService<IModelRunRecordRepository>();
+    private IModelRunToolCallRepository ModelRunToolCallRepository => GetRequiredService<IModelRunToolCallRepository>();
     private IModelConfigRepository ModelConfigRepository => GetRequiredService<IModelConfigRepository>();
 
     private static readonly JsonSerializerOptions _jsonOptions = new()
@@ -49,6 +50,19 @@ public class ChatsService : ServiceBase, IChatsService
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
     };
+
+    private static string? ExtractSkillName(string? toolArguments)
+    {
+        if (string.IsNullOrEmpty(toolArguments)) return null;
+        try
+        {
+            using var doc = JsonDocument.Parse(toolArguments);
+            if (doc.RootElement.TryGetProperty("skillName", out var skillName))
+                return skillName.GetString();
+        }
+        catch { }
+        return null;
+    }
 
     [OpenApiTag("ai/chats"), OpenApiOperation("获取分页列表", "")]
     [RoutePattern(pattern: "page", true)]
@@ -363,7 +377,8 @@ public class ChatsService : ServiceBase, IChatsService
             var (completionResult, chatAgentModel) = await ProcessCompletionAsync(input, aiSetting, agentModel, chatsEntity, cancellationToken);
             if (completionResult == null)
             {
-                await WriteSseEventAsync("error", new { v = "AI 响应失败" });
+                if (!cancellationToken.IsCancellationRequested)
+                    await WriteSseEventAsync("error", new { v = "AI 响应失败" });
                 return;
             }
 
@@ -474,12 +489,40 @@ public class ChatsService : ServiceBase, IChatsService
             if (!chatsEntity.SessionId.IsNullOrWhiteSpace())
                 sessionDbKey = chatsEntity.SessionId;
 
-            (var fullContent, sessionDbKey) = await AIAgentRunner.RunStreamingAsync(
+            var streamingResult = await AIAgentRunner.RunStreamingAsync(
                 aiSetting,
                 agentModel,
                 input.Prompt,
                 async args =>
                 {
+                    // 持久化工具调用记录
+                    if (args.EventType is StreamingEventType.ToolCallStart or StreamingEventType.EchartsStart)
+                    {
+                        await ModelRunToolCallRepository.InsertAsync(new ModelRunToolCallEntity
+                        {
+                            RunRecordId = entity.Id,
+                            CallId = args.CallId,
+                            ToolName = args.ToolName ?? "",
+                            SkillName = ExtractSkillName(args.ToolArguments),
+                            ToolType = args.EventType == StreamingEventType.EchartsStart ? "echarts" : "tool",
+                            Arguments = args.ToolArguments,
+                            Status = "running",
+                            StartTime = DateTime.Now
+                        });
+                    }
+                    else if (args.EventType is StreamingEventType.ToolCallEnd or StreamingEventType.EchartsEnd)
+                    {
+                        var existing = await ModelRunToolCallRepository.GetFirstAsync(t => t.RunRecordId == entity.Id && t.CallId == args.CallId);
+                        if (existing != null)
+                        {
+                            existing.Result = args.ToolResult;
+                            existing.Status = "done";
+                            existing.IsSuccess = !string.IsNullOrEmpty(args.ToolResult);
+                            existing.EndTime = DateTime.Now;
+                            await ModelRunToolCallRepository.UpdateAsync(existing);
+                        }
+                    }
+
                     // SSE 标准输出
                     await WriteSseEventAsync(args.EventType switch
                     {
@@ -500,28 +543,42 @@ public class ChatsService : ServiceBase, IChatsService
                         chartOption = (!string.IsNullOrEmpty(args.ToolResult) && args.EventType == StreamingEventType.EchartsEnd) ?
                             JsonSerializer.Deserialize<EchartsOption>(args.ToolResult,_jsonOptions) : null,
                     });
-                }, sessionDbKey);
+                }, sessionDbKey, ct);
             chatsEntity.SessionId = sessionDbKey;
 
-            entity.IsSuccess = true;
-            entity.Content = fullContent;
+            if (ct.IsCancellationRequested)
+            {
+                entity.IsSuccess = false;
+                entity.ErrorMessage = "用户取消了对话";
+                Logger.LogInformation("用户取消了对话");
+            }
+            else
+            {
+                entity.IsSuccess = true;
+                entity.Content = streamingResult.Content;
+                entity.PromptTokens = streamingResult.PromptTokens;
+                entity.CompletionTokens = streamingResult.CompletionTokens;
+            }
         }
         catch (Exception ex)
         {
-            string displayMessage = ex.Message;
-            if (ex is ClientResultException rex)
-            {
-                // 识别 DeepSeek 推理回传错误
-                if (displayMessage.Contains("reasoning_content") && displayMessage.Contains("passed back"))
-                {
-                    displayMessage = "【框架兼容性提示】检测到 DeepSeek 思考模型触发了工具调用。由于当前框架尚未实现 reasoning_content 的自动回传，请求已被 API 拦截。请尝试切换至非思考模型（如 deepseek-chat）。";
-                }
-            }
-
-            await WriteSseEventAsync("error", new { v = displayMessage });
             entity.IsSuccess = false;
             entity.ErrorMessage = ex.Message;
             Logger.LogError(ex, "调用大模型失败");
+
+            if (!ct.IsCancellationRequested)
+            {
+                string displayMessage = ex.Message;
+                if (ex is ClientResultException rex)
+                {
+                    // 识别 DeepSeek 推理回传错误
+                    if (displayMessage.Contains("reasoning_content") && displayMessage.Contains("passed back"))
+                    {
+                        displayMessage = "【框架兼容性提示】检测到 DeepSeek 思考模型触发了工具调用。由于当前框架尚未实现 reasoning_content 的自动回传，请求已被 API 拦截。请尝试切换至非思考模型（如 deepseek-chat）。";
+                    }
+                }
+                await WriteSseEventAsync("error", new { v = displayMessage });
+            }
         }
         finally
         {
@@ -529,6 +586,9 @@ public class ChatsService : ServiceBase, IChatsService
             entity.DurationMs = stopwatch.ElapsedMilliseconds;
             await ModelRunRecordRepository.InsertAsync(entity);
         }
+
+        if (ct.IsCancellationRequested)
+            return (null, agentModel);
 
         var result = entity.IsSuccess ? entity.Map<ChatContentDto>() : null;
         return (result, agentModel);

@@ -74,7 +74,7 @@ public class KanbanServiceTests : ServiceTestBase
     {
         var result = await KanbanService.GetConfigAsync(99999);
 
-        result.Should().BeNull();
+        result.Data.Should().BeNull();
     }
 
     // ============================================================

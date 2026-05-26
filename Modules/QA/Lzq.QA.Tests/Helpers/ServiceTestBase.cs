@@ -2,6 +2,7 @@ using Lzq.QA.Application.Services;
 using Lzq.QA.Domain.Entities;
 using Lzq.QA.Domain.IRepositories;
 using Lzq.QA.Domain.Repositories;
+using Lzq.Extensions.Redis;
 using Masa.BuildingBlocks.Data;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
@@ -48,11 +49,15 @@ public abstract class ServiceTestBase : IDisposable
 
         // 3. 构建测试用 ServiceProvider，并注册 IHttpContextAccessor 模拟
         var services = new ServiceCollection();
+        services.AddMapster();
 
         // 注册所有仓储
         services.AddSingleton<IDefectRecordRepository>(DefectRepo);
         services.AddSingleton<IQCOrderRepository>(QCOrderRepo);
         services.AddSingleton<IQCOrderItemRepository>(QCOrderItemRepo);
+
+        // 注入 TestRedisClient（ServiceBase 通过 GetRequiredService 解析）
+        services.AddSingleton<ILzqRedisClient>(new TestRedisClient());
 
         // 模拟 IHttpContextAccessor，使其返回的 RequestServices 指向本 ServiceProvider
         var mockHttpContextAccessor = new Mock<IHttpContextAccessor>();
@@ -91,5 +96,23 @@ public abstract class ServiceTestBase : IDisposable
     public void Dispose()
     {
         Db.Dispose();
+    }
+
+    /// <summary>
+    /// 测试用 Redis 客户端桩 —— 确保 GetOrSetAsync 执行工厂委托而非返回 null
+    /// </summary>
+    private sealed class TestRedisClient : ILzqRedisClient
+    {
+        public T? Get<T>(string key) => default;
+        public Task<T?> GetAsync<T>(string key) => Task.FromResult<T?>(default);
+        public void Set<T>(string key, T value, TimeSpan? expiry = null) { }
+        public Task SetAsync<T>(string key, T value, TimeSpan? expiry = null) => Task.CompletedTask;
+        public bool Remove(string key) => true;
+        public Task<bool> RemoveAsync(string key) => Task.FromResult(true);
+        public bool Exists(string key) => false;
+        public Task<bool> ExistsAsync(string key) => Task.FromResult(false);
+        public IDisposable Lock(string resourceKey, int timeoutSeconds = 10) => new MemoryStream();
+        public async Task<T?> GetOrSetAsync<T>(string key, Func<Task<T?>> dataRetriever, TimeSpan? expiry = null)
+            => await dataRetriever();
     }
 }

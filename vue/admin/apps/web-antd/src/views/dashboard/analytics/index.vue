@@ -68,7 +68,7 @@ async function fetchTopCard() {
     overviewItems.value[2]!.totalValue = data.totalApiCalls;
 
     overviewItems.value[3]!.value = data.todaySkillCalls;
-    overviewItems.value[3]!.totalValue = data.todaySkillCalls; // 可按需修改为累计
+    overviewItems.value[3]!.totalValue = data.totalSkillCalls;
   } catch (error) {
     console.error('获取顶部卡片数据失败', error);
   }

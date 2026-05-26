@@ -65,7 +65,7 @@ public sealed class TestDbContext : IDisposable
         if (entities.Length > 0)
         {
             foreach (var entity in entities)
-                _client.Insertable(entity).ExecuteCommand();
+                _client.InsertableByObject(entity).ExecuteCommand();
         }
     }
 

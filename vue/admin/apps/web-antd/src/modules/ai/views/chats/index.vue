@@ -23,6 +23,7 @@ const [Modal, modalApi] = useVbenModal({ connectedComponent: AgentModal })
 
 // ========== 流式状态 ==========
 const isStreaming = ref(false)
+const abortController = ref<AbortController | null>(null)
 
 // ========== 主题 ==========
 const isDark = ref(true)
@@ -207,6 +208,16 @@ const agentSuccessHandle = (data: ChatsApi.ChatsAgent) => { currentAgent.value =
 // ========== 语音 ==========
 const onVoiceText = (text: string) => { inputText.value = text }
 
+// ========== 终止流式响应 ==========
+const stopStreaming = () => {
+  abortController.value?.abort()
+  abortController.value = null
+  isStreaming.value = false
+  const aiMsg = messages.value[messages.value.length - 1]
+  if (aiMsg && aiMsg.role === 'assistant' && !aiMsg.content && (!aiMsg.segments || aiMsg.segments.length === 0))
+    messages.value.pop()
+}
+
 // ========== 流式发送 ==========
 const sendMessage = async () => {
   const prompt = inputText.value.trim()
@@ -229,6 +240,9 @@ const sendMessage = async () => {
   const aiMsg: ExtendedMessage = { id: aiMsgId, role: 'assistant', content: '', segments: [] }
   messages.value.push(aiMsg)
 
+  abortController.value = new AbortController()
+  const signal = abortController.value.signal
+
   try {
     const response = await fetch(`${apiURL}/ai/chats/completion`, {
       method: 'POST',
@@ -239,6 +253,7 @@ const sendMessage = async () => {
         AIModelConfigId: selectedModelId.value,
         ChatsId: currentChats.value?.id ?? '0',
       }),
+      signal,
     })
 
     if (!response.body) return
@@ -387,20 +402,22 @@ const sendMessage = async () => {
             }
             break
           }
-          // case 'close': {
-          //   isStreaming.value = false
-          //   break
-          // }
+          case 'close': {
+            isStreaming.value = false
+            break
+          }
         }
       }
     }
-  } catch {
+  } catch (err: any) {
+    if (err?.name === 'AbortError') {
+      return
+    }
     const aiMsg = messages.value.find(m => m.id === aiMsgId)
     if (aiMsg) aiMsg.content = '抱歉，服务遇到了一点问题，请稍后再试。'
   }
   finally {
-    // 无论如何都要释放锁
-    isStreaming.value = false
+    abortController.value = null
   }
 }
 </script>
@@ -468,11 +485,16 @@ const sendMessage = async () => {
                   @select="selectedModelId = $event; isModelOpen = false"
                   @toggle="isModelOpen = !isModelOpen"
                 />
-                <button @click="sendMessage" :disabled="!inputText.trim() || isStreaming"
+                <button v-if="isStreaming" @click="stopStreaming"
+                  class="px-5 py-1.5 rounded-xl font-bold text-[12px] flex items-center gap-2 text-white"
+                  style="background: #ff4d4f;">
+                  <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
+                  <span>停止</span>
+                </button>
+                <button v-else @click="sendMessage" :disabled="!inputText.trim()"
                   :class="['px-5 py-1.5 rounded-xl transition-all font-bold text-[12px] flex items-center gap-2', inputText.trim() ? 'text-white shadow-lg' : 'cursor-not-allowed']"
                   :style="inputText.trim() ? { backgroundColor: 'var(--accent)', boxShadow: '0 10px 15px -3px var(--accent-shadow)' } : { backgroundColor: 'var(--bg-disabled)', color: 'var(--text-muted)' }">
-                  <span v-if="isStreaming">发送中…</span>
-                  <span v-else>发送</span>
+                  <span>发送</span>
                   <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
                 </button>
                 <VoiceInputButton @text-recognized="onVoiceText" :disabled="isStreaming" />

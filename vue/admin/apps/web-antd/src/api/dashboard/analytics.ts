@@ -9,6 +9,7 @@ export interface TopCardData {
   todayApiCalls: number;
   totalApiCalls: number;
   todaySkillCalls: number;
+  totalSkillCalls: number;
 }
 
 export async function getTopCard() {
@@ -17,9 +18,9 @@ export async function getTopCard() {
 
 // ==================== 对话请求趋势（按天） ====================
 export interface ConversationTrendsData {
-  dates: string[];          // ['05-02', '05-03', ...]
-  userRequests: number[];   // 用户请求量
-  assistantResponses: number[]; // AI 响应量
+  dates: string[];            // ['05-02', '05-03', ...]
+  conversations: number[];    // 对话数
+  apiCalls: number[];         // API 调用数
 }
 
 export async function getConversationTrends(params?: { days?: number }) {

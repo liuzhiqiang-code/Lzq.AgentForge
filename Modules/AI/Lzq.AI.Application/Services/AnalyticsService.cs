@@ -4,6 +4,7 @@ using Lzq.AI.Domain.IRepositories;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Mvc;
 using NSwag.Annotations;
+using SqlSugar;
 
 namespace Lzq.AI.Application.Services;
 
@@ -13,6 +14,8 @@ public class AnalyticsService : ServiceBase, IAnalyticsService
 
     private IAgentManageRepository AgentManageRepository => GetRequiredService<IAgentManageRepository>();
     private IChatsRepository ChatsRepository => GetRequiredService<IChatsRepository>();
+    private IModelRunRecordRepository ModelRunRecordRepository => GetRequiredService<IModelRunRecordRepository>();
+    private IModelRunToolCallRepository ModelRunToolCallRepository => GetRequiredService<IModelRunToolCallRepository>();
 
     [OpenApiTag("ai/analytics"), OpenApiOperation("获取顶部卡片数据信息", "")]
     [RoutePattern(pattern: "topCard", true, HttpMethod = "Get")]
@@ -21,16 +24,21 @@ public class AnalyticsService : ServiceBase, IAnalyticsService
         var todayStart = DateTime.Today;
         var todayEnd = todayStart.AddDays(1);
 
-        // 并行统计
         var totalConversationsTask = ChatsRepository.AsQueryable().CountAsync();
         var todayConversationsTask = ChatsRepository.AsQueryable().CountAsync(c => c.CreationTime >= todayStart && c.CreationTime < todayEnd);
         var totalAgentsTask = AgentManageRepository.AsQueryable().CountAsync();
-        // 假设活跃智能体为今日产生过对话的智能体
         var activeAgentsTask = ChatsRepository.AsQueryable()
             .Where(c => c.CreationTime >= todayStart)
             .Select(c => c.AIAgentName).Distinct().CountAsync();
+        var todayApiCallsTask = ModelRunRecordRepository.AsQueryable().CountAsync(r => r.CreationTime >= todayStart && r.CreationTime < todayEnd);
+        var totalApiCallsTask = ModelRunRecordRepository.AsQueryable().CountAsync();
 
-        await Task.WhenAll(totalConversationsTask, todayConversationsTask, totalAgentsTask, activeAgentsTask);
+        var todaySkillCallsTask = ModelRunToolCallRepository.AsQueryable()
+            .CountAsync(t => t.StartTime >= todayStart && t.StartTime < todayEnd && t.Status == "done");
+        var totalSkillCallsTask = ModelRunToolCallRepository.AsQueryable()
+            .CountAsync(t => t.Status == "done");
+
+        await Task.WhenAll(totalConversationsTask, todayConversationsTask, totalAgentsTask, activeAgentsTask, todayApiCallsTask, totalApiCallsTask, todaySkillCallsTask, totalSkillCallsTask);
 
         var result = new TopCardViewDto
         {
@@ -38,9 +46,10 @@ public class AnalyticsService : ServiceBase, IAnalyticsService
             TodayConversations = todayConversationsTask.Result,
             ActiveAgents = activeAgentsTask.Result,
             TotalAgents = totalAgentsTask.Result,
-            TodayApiCalls = 1250, // 模拟数据
-            TotalApiCalls = 85420, // 模拟数据
-            TodaySkillCalls = 88 // 模拟数据
+            TodayApiCalls = todayApiCallsTask.Result,
+            TotalApiCalls = totalApiCallsTask.Result,
+            TodaySkillCalls = todaySkillCallsTask.Result,
+            TotalSkillCalls = totalSkillCallsTask.Result,
         };
 
         return ApiResult.Success(result);
@@ -50,16 +59,31 @@ public class AnalyticsService : ServiceBase, IAnalyticsService
     [RoutePattern(pattern: "conversation-trends", true, HttpMethod = "Get")]
     public async Task<ApiResult> GetConversationTrendsAsync([FromQuery] int days = 7)
     {
-        // 模拟近7天趋势
+        var startDate = DateTime.Today.AddDays(-(days - 1));
         var dates = Enumerable.Range(0, days)
-            .Select(i => DateTime.Today.AddDays(-i).ToString("MM-dd"))
-            .Reverse().ToList();
+            .Select(i => startDate.AddDays(i).ToString("MM-dd"))
+            .ToList();
+
+        var conversationsPerDay = await ChatsRepository.AsQueryable()
+            .Where(c => c.CreationTime >= startDate)
+            .GroupBy(c => c.CreationTime.Date)
+            .Select(c => new { Date = c.CreationTime.Date, Count = SqlFunc.AggregateCount(c.Id) })
+            .ToListAsync();
+
+        var callsPerDay = await ModelRunRecordRepository.AsQueryable()
+            .Where(r => r.CreationTime >= startDate)
+            .GroupBy(r => r.CreationTime.Date)
+            .Select(r => new { Date = r.CreationTime.Date, Count = SqlFunc.AggregateCount(r.Id) })
+            .ToListAsync();
+
+        var convDict = conversationsPerDay.ToDictionary(x => x.Date.ToString("MM-dd"), x => (int)x.Count);
+        var callDict = callsPerDay.ToDictionary(x => x.Date.ToString("MM-dd"), x => (int)x.Count);
 
         var result = new ConversationTrendsDto
         {
             Dates = dates,
-            UserRequests = dates.Select(_ => Random.Shared.Next(100, 500)).ToArray(),
-            AssistantResponses = dates.Select(_ => Random.Shared.Next(100, 500)).ToArray()
+            Conversations = dates.Select(d => convDict.GetValueOrDefault(d, 0)).ToArray(),
+            ApiCalls = dates.Select(d => callDict.GetValueOrDefault(d, 0)).ToArray()
         };
 
         return ApiResult.Success(result);
@@ -69,11 +93,23 @@ public class AnalyticsService : ServiceBase, IAnalyticsService
     [RoutePattern(pattern: "model-usage-monthly", true, HttpMethod = "Get")]
     public async Task<ApiResult> GetModelUsageMonthlyAsync([FromQuery] int months = 6)
     {
-        var monthLabels = new[] { "1月", "2月", "3月", "4月", "5月", "6月" };
+        var startMonth = DateTime.Today.AddMonths(-(months - 1));
+        var monthLabels = Enumerable.Range(0, months)
+            .Select(i => startMonth.AddMonths(i).ToString("yyyy-MM"))
+            .ToList();
+
+        var usageByMonth = await ModelRunRecordRepository.AsQueryable()
+            .Where(r => r.CreationTime >= startMonth)
+            .GroupBy(r => new { r.CreationTime.Year, r.CreationTime.Month })
+            .Select(r => new { r.CreationTime.Year, r.CreationTime.Month, Count = SqlFunc.AggregateCount(r.Id) })
+            .ToListAsync();
+
+        var monthDict = usageByMonth.ToDictionary(x => $"{x.Year}-{x.Month:D2}", x => (int)x.Count);
+
         var result = new ModelUsageMonthlyDto
         {
-            Months = monthLabels,
-            Values = monthLabels.Select(_ => Random.Shared.Next(1000, 5000)).ToArray()
+            Months = monthLabels.Select(m => $"{m[..4]}年{m[5..7]}月").ToArray(),
+            Values = monthLabels.Select(m => monthDict.GetValueOrDefault(m, 0)).ToArray()
         };
 
         return ApiResult.Success(result);
@@ -83,26 +119,32 @@ public class AnalyticsService : ServiceBase, IAnalyticsService
     [RoutePattern(pattern: "agent-usage-ranking", true, HttpMethod = "Get")]
     public async Task<ApiResult> GetAgentUsageRankingAsync([FromQuery] int top = 5)
     {
-        // 尝试从数据库获取真实前几名，若无数据则返回模拟
-        var agents = await AgentManageRepository.AsQueryable()
-            .Take(top)
-            .Select(a => new AgentUsageItemDto { Name = a.Name, Count = Random.Shared.Next(50, 200) })
+        var ranking = await ModelRunRecordRepository.AsQueryable()
+            .GroupBy(r => r.AIAgentName)
+            .Select(r => new { Name = r.AIAgentName, Count = SqlFunc.AggregateCount(r.Id) })
             .ToListAsync();
 
-        return ApiResult.Success(agents);
+        var result = ranking
+            .OrderByDescending(x => x.Count)
+            .Take(top)
+            .Select(x => new AgentUsageItemDto { Name = x.Name, Count = (int)x.Count })
+            .ToList();
+
+        return ApiResult.Success(result);
     }
 
     [OpenApiTag("ai/analytics"), OpenApiOperation("获取模型调用分布", "")]
     [RoutePattern(pattern: "model-distribution", true, HttpMethod = "Get")]
     public async Task<ApiResult> GetModelDistributionAsync()
     {
-        var result = new List<ModelDistributionItemDto>
-        {
-            new() { Name = "GPT-4o", Value = 450 },
-            new() { Name = "Claude 3.5 Sonnet", Value = 320 },
-            new() { Name = "DeepSeek-V3", Value = 280 },
-            new() { Name = "Gemini 1.5 Pro", Value = 150 }
-        };
+        var distribution = await ModelRunRecordRepository.AsQueryable()
+            .GroupBy(r => r.ChatClient)
+            .Select(r => new { Name = r.ChatClient, Count = SqlFunc.AggregateCount(r.Id) })
+            .ToListAsync();
+
+        var result = distribution
+            .Select(x => new ModelDistributionItemDto { Name = x.Name, Value = (int)x.Count })
+            .ToList();
 
         return ApiResult.Success(result);
     }
@@ -111,13 +153,16 @@ public class AnalyticsService : ServiceBase, IAnalyticsService
     [RoutePattern(pattern: "skill-stats", true, HttpMethod = "Get")]
     public async Task<ApiResult> GetSkillStatsAsync()
     {
-        var result = new List<SkillStatsItemDto>
-        {
-            new() { Name = "Google Search", Count = 120 },
-            new() { Name = "Python Interpreter", Count = 85 },
-            new() { Name = "File Reader", Count = 64 },
-            new() { Name = "Image Generator", Count = 42 }
-        };
+        var stats = await ModelRunToolCallRepository.AsQueryable()
+            .Where(t => t.SkillName != null && t.Status == "done")
+            .GroupBy(t => t.SkillName)
+            .Select(t => new { Name = t.SkillName, Count = SqlFunc.AggregateCount(t.Id) })
+            .ToListAsync();
+
+        var result = stats
+            .OrderByDescending(x => x.Count)
+            .Select(x => new SkillStatsItemDto { Name = x.Name!, Count = (int)x.Count })
+            .ToList();
 
         return ApiResult.Success(result);
     }

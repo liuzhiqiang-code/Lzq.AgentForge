@@ -7,7 +7,7 @@
   </PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Lzq.Extensions.AI" Version="$(LzqExtensionsVersion)" />
+        <PackageReference Include="Lzq.Extensions.AI" Version="$(LzqExtensionsVersion)" />
 		<PackageReference Include="Lzq.Extensions.SqlSugar" Version="$(LzqExtensionsVersion)" />
 	</ItemGroup>
 

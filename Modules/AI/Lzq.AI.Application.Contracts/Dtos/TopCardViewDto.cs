@@ -36,4 +36,9 @@ public record TopCardViewDto
     /// 今日技能被调用的总次数
     /// </summary>
     public int TodaySkillCalls { get; set; }
+
+    /// <summary>
+    /// 累计技能调用次数
+    /// </summary>
+    public int TotalSkillCalls { get; set; }
 }

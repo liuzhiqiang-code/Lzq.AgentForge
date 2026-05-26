@@ -1,22 +1,43 @@
 using Lzq.AgentForge.WebApi.Extensions;
+using Lzq.AI.Application;
+using Lzq.BaseData.Application;
 using Lzq.Core.Json;
 using Lzq.Core.Modules;
+using Lzq.Dashboard.Application;
+using Lzq.Equipment.Application;
+using Lzq.Extensions.EventBus;
+using Lzq.Extensions.ExternalHttpApi;
+using Lzq.Extensions.Jwt;
+using Lzq.Extensions.NSwag;
+using Lzq.Extensions.Redis;
+using Lzq.QA.Application;
+using Lzq.Rbac.Application;
+using Lzq.Temp.Application;
+using Lzq.WorkOrder.Application;
 using Masa.BuildingBlocks.Data;
 
 namespace Lzq.AgentForge.WebApi;
 
+[DependsOn(
+    typeof(NSwagModule),
+    typeof(ExternalHttpApiModule),
+    typeof(JwtModule),
+    typeof(RedisModule),
+    typeof(EventBusModule),
+    typeof(RbacApplicationModule),
+    typeof(AIApplicationModule),
+    typeof(BaseDataApplicationModule),
+    typeof(EquipmentApplicationModule),
+    typeof(QAApplicationModule),
+    typeof(WorkOrderApplicationModule),
+    typeof(DashboardApplicationModule),
+    typeof(TempApplicationModule)
+)]
 public class WebApiModule : BaseModule
 {
-    public override void Configure(ModuleConfigureContext context)
-    {
-        var currentAssembly = typeof(WebApiModule).Assembly;
-        MasaApp.TryAddAssemblies(currentAssembly);
-    }
-
     public override void PreConfigureServices(ModuleServiceContext context)
     {
         var services = context.Services;
-        services.AddAutoInject(MasaApp.GetAssemblies());
         services.AddLzqHealthChecks();
         services.AddCors(options =>
         {
@@ -39,8 +60,8 @@ public class WebApiModule : BaseModule
         context.Services
             .AddMasaMinimalAPIs(options =>
             {
-                options.DisableTrimMethodPrefix = true;//禁用移除方法前缀(上方 `Get`、`Post`、`Put`、`Delete` 请求的前缀)
-                options.MapHttpMethodsForUnmatched = new string[] { "Post" };//当前服务禁用自动注册路由
+                options.DisableTrimMethodPrefix = true;
+                options.MapHttpMethodsForUnmatched = new string[] { "Post" };
             });
     }
 

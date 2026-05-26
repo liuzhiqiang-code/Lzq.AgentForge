@@ -9,7 +9,7 @@ const { renderEcharts } = useEcharts(chartRef);
 
 onMounted(async () => {
   // 从后端获取近7天每小时的对话量
-  const { dates, userRequests, assistantResponses } = await getConversationTrends();
+  const { dates, conversations, apiCalls } = await getConversationTrends();
 
   renderEcharts({
     grid: { bottom: 0, containLabel: true, left: '1%', right: '1%', top: '2%' },
@@ -18,15 +18,15 @@ onMounted(async () => {
     yAxis: { type: 'value' },
     series: [
       {
-        name: '用户请求',
+        name: '对话数',
         type: 'bar',
-        data: userRequests,
+        data: conversations,
         itemStyle: { color: '#5ab1ef' },
       },
       {
-        name: 'AI 响应',
+        name: 'API 调用',
         type: 'line',
-        data: assistantResponses,
+        data: apiCalls,
         itemStyle: { color: '#019680' },
         smooth: true,
       },
