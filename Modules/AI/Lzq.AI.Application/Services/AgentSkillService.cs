@@ -1,4 +1,3 @@
-using Lzq.AI.Application.Contracts.Commands;
 using Lzq.AI.Application.Contracts.IServices;
 using Lzq.AI.Application.Contracts.Requests;
 using Lzq.Extensions.AI.AgentSkills;
@@ -21,40 +20,6 @@ public class AgentSkillService : ServiceBase, IAgentSkillService
     public async Task<ApiResult> ListAsync()
     {
         return ApiResult.Success(SkillManager.GetSkills());
-    }
-
-    [OpenApiTag("ai/agentSkill"), OpenApiOperation("增加", "")]
-    [RoutePattern(pattern: "create", true)]
-    public async Task<ApiResult> CreateAsync([FromBody] AgentManageCreateCommand command)
-    {
-        //var entity = command.Map<AIAgentManageEntity>();
-        //await AIAgentManageRepository.InsertAsync(entity);
-        return ApiResult.Success();
-    }
-
-    [OpenApiTag("ai/agentSkill"), OpenApiOperation("更新", "")]
-    [RoutePattern(pattern: "update", true)]
-    public async Task<ApiResult> UpdateAsync([FromBody] AgentManageUpdateCommand command)
-    {
-        //var entity = command.Map<AIAgentManageEntity>();
-        //await AIAgentManageRepository.UpdateAsync(entity);
-        return ApiResult.Success();
-    }
-
-    [OpenApiTag("ai/agentSkill"), OpenApiOperation("删除", "")]
-    [RoutePattern(pattern: "delete/{id}", true)]
-    public async Task<ApiResult> DeleteAsync(long id)
-    {
-        //await AIAgentManageRepository.DeleteAsync(a => id.Equals(a.Id));
-        return ApiResult.Success();
-    }
-
-    [OpenApiTag("ai/agentSkill"), OpenApiOperation("批量删除", "")]
-    [RoutePattern(pattern: "batchDelete", true, HttpMethod = "Delete")]
-    public async Task<ApiResult> BatchDeleteAsync([FromBody] List<long> ids)
-    {
-        //await AIAgentManageRepository.DeleteAsync(a => ids.Contains(a.Id));
-        return ApiResult.Success();
     }
 
     [OpenApiTag("ai/agentSkill"), OpenApiOperation("执行", "")]

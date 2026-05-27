@@ -49,11 +49,6 @@ export async function getAvailableModels(provider: number, keyValue: string) {
   return requestClient.post<string[]>('/ai/apiKey/getAvailableModels', { provider, keyValue });
 }
 
-/** 获取已配置模型（根据 apiKeyId�?*/
-export async function getConfiguredModels(apiKeyId: number) {
-  return requestClient.get<string[]>('/ai/apiKey/getConfiguredModels', { params: { apiKeyId } });
-}
-
 /**
  * 创建
  * @param data 数据

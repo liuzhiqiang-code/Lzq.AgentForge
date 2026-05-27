@@ -56,7 +56,12 @@ function handleSelect(value: number) {
 
 .provider-card-active {
   border-color: var(--accent, #0960bd);
-  background-color: rgba(9, 96, 189, 0.06);
+  background-color: rgba(9, 96, 189, 0.08);
+  box-shadow: 0 0 0 1px var(--accent, #0960bd);
+}
+
+:root.dark .provider-card-active {
+  background-color: rgba(9, 96, 189, 0.2);
 }
 
 /* 确保 line-clamp 生效 */

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, nextTick, watch, onMounted, onUnmounted, toRaw } from 'vue'
+import { ref, computed, nextTick, watch, onMounted, onUnmounted, toRaw } from 'vue'
 import { useAppConfig } from '@vben/hooks'
 import { useAccessStore } from '@vben/stores'
 import { getChatsList, getChatsHistory, getModels, deleteChats, updateTitleChats, updateTopChats } from '#/modules/ai/api/chats'
@@ -12,7 +12,7 @@ import VoiceInputButton from './modules/voice-input-button.vue'
 import ChatSidebar from './modules/chatSidebar.vue'
 import ChatMessage from './modules/chatMessage.vue'
 import ModelSelector from './modules/modelSelector.vue'
-import type { StreamingEventArgs,ExtendedMessage, HistoryItem } from './types'
+import type { ExtendedMessage, HistoryItem } from './types'
 
 // ========== 全局配置 ==========
 const { apiURL } = useAppConfig(import.meta.env, import.meta.env.PROD)
@@ -53,7 +53,6 @@ const editingItemId = ref<string>()
 const editingTitle = ref('')
 
 // ========== 计算属性 ==========
-import { computed } from 'vue'
 const selectedModelDisplay = computed(() => {
   const found = models.value.find(m => m.id === selectedModelId.value)
   return found ? `${found.keyName}_${found.configName}` : selectedModelId.value
@@ -418,6 +417,7 @@ const sendMessage = async () => {
   }
   finally {
     abortController.value = null
+    isStreaming.value = false
   }
 }
 </script>
@@ -593,51 +593,4 @@ const sendMessage = async () => {
 textarea { scrollbar-width: none; }
 .input-wrapper { box-shadow: 0 0 0 0 transparent; }
 .input-wrapper:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-shadow); }
-
-/* ========== 消息段样式 ========== */
-.thinking-block { margin-bottom: 4px; }
-.thinking-toggle { display: flex; align-items: center; gap: 6px; background: transparent; border: none; cursor: pointer; padding: 4px 0; width: 100%; }
-.thinking-toggle:hover { opacity: 0.8; }
-.thinking-chevron { transition: transform 0.2s ease; color: var(--text-muted); flex-shrink: 0; }
-.thinking-chevron.rotated { transform: rotate(90deg); }
-.thinking-label { font-size: 11px; font-weight: 600; color: var(--text-muted); letter-spacing: 0.5px; text-transform: uppercase; }
-.thinking-content { font-size: 11px; color: var(--text-muted); line-height: 1.6; padding: 8px 12px; margin-top: 2px; background: var(--bg-hover); border-radius: 8px; border-left: 2px solid var(--accent); white-space: pre-wrap; word-break: break-word; }
-
-.tool-block { margin-bottom: 4px; }
-.tool-toggle { display: flex; align-items: center; gap: 6px; background: transparent; border: none; cursor: pointer; padding: 4px 0; width: 100%; }
-.tool-toggle:hover { opacity: 0.8; }
-.tool-chevron { transition: transform 0.2s ease; color: var(--text-muted); flex-shrink: 0; }
-.tool-chevron.rotated { transform: rotate(90deg); }
-.tool-icon { color: var(--accent); flex-shrink: 0; }
-.tool-name { font-size: 11px; font-weight: 600; color: var(--text-muted); letter-spacing: 0.3px; }
-.tool-spinner { width: 10px; height: 10px; border: 1.5px solid var(--text-muted); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; flex-shrink: 0; }
-.tool-done { color: #52c41a; flex-shrink: 0; }
-.tool-detail { margin-top: 2px; padding: 8px 10px; background: var(--bg-hover); border-radius: 8px; border-left: 2px solid var(--accent); }
-.tool-section { margin-bottom: 6px; }
-.tool-section:last-child { margin-bottom: 0; }
-.tool-section-label { font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 4px; }
-.tool-pre { font-size: 10px; font-family: 'Fira Code', 'Cascadia Code', monospace; color: var(--text-secondary); background: var(--bg-secondary); padding: 6px 8px; border-radius: 6px; overflow-x: auto; max-height: 160px; line-height: 1.5; white-space: pre-wrap; word-break: break-all; }
-@keyframes spin { to { transform: rotate(360deg); } }
-
-.error-block { display: flex; align-items: flex-start; gap: 8px; margin-top: 12px; padding: 10px 12px; background: var(--error-bg); border: 1px solid var(--error-border); border-radius: 8px; color: var(--error-text); font-size: 13px; line-height: 1.5; }
-.error-icon { flex-shrink: 0; margin-top: 2px; color: var(--error-icon); }
-
-/* Markdown */
-.markdown-body { word-break: break-word; line-height: 1.75; color: inherit; }
-.markdown-body :deep(> *:last-child) { margin-bottom: 0 !important; }
-.markdown-body :deep(h1), .markdown-body :deep(h2), .markdown-body :deep(h3) { color: inherit; font-weight: 600; margin-top: 1.5rem; margin-bottom: 0.75rem; }
-.markdown-body :deep(h1) { font-size: 1.5rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.3rem; }
-.markdown-body :deep(h2) { font-size: 1.25rem; }
-.markdown-body :deep(h3) { font-size: 1.1rem; }
-.markdown-body :deep(p) { margin-bottom: 1rem; }
-.markdown-body :deep(ul), .markdown-body :deep(ol) { padding-left: 1.5rem; margin-bottom: 1rem; }
-.markdown-body :deep(li) { margin-bottom: 0.25rem; }
-.markdown-body :deep(blockquote) { margin: 1rem 0; padding: 0 1rem; color: var(--text-muted); border-left: 0.25rem solid var(--accent); background: rgba(9, 96, 189, 0.05); }
-.markdown-body :deep(code:not(pre code)) { font-family: monospace; background-color: var(--bg-hover); padding: 0.2rem 0.4rem; border-radius: 6px; font-size: 88%; }
-.markdown-body :deep(pre) { background-color: var(--bg-secondary); padding: 1rem; border-radius: 12px; overflow-x: auto; margin: 1.2rem 0; border: 1px solid var(--border-color); }
-.markdown-body :deep(pre code) { background: transparent; padding: 0; font-size: 13px; }
-.markdown-body :deep(table) { width: 100%; border-collapse: collapse; margin-bottom: 1rem; font-size: 13px; }
-.markdown-body :deep(th), .markdown-body :deep(td) { padding: 8px 12px; border: 1px solid var(--border-color); }
-.markdown-body :deep(th) { background-color: var(--bg-hover); text-align: left; }
-.markdown-body :deep(a) { color: var(--accent); }
 </style>

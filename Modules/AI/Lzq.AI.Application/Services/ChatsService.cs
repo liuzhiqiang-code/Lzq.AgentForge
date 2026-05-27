@@ -12,7 +12,6 @@ using Lzq.Core.Models;
 using Lzq.Extensions.AI;
 using Lzq.Extensions.AI.Interfaces;
 using Lzq.Extensions.AI.Provider;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -485,6 +484,10 @@ public class ChatsService : ServiceBase, IChatsService
         var stopwatch = Stopwatch.StartNew();
         try
         {
+            using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            timeoutCts.CancelAfter(TimeSpan.FromMinutes(3));
+            var timeoutToken = timeoutCts.Token;
+
             string? sessionDbKey = null;
             if (!chatsEntity.SessionId.IsNullOrWhiteSpace())
                 sessionDbKey = chatsEntity.SessionId;
@@ -543,7 +546,7 @@ public class ChatsService : ServiceBase, IChatsService
                         chartOption = (!string.IsNullOrEmpty(args.ToolResult) && args.EventType == StreamingEventType.EchartsEnd) ?
                             JsonSerializer.Deserialize<EchartsOption>(args.ToolResult,_jsonOptions) : null,
                     });
-                }, sessionDbKey, ct);
+                }, sessionDbKey, timeoutToken);
             chatsEntity.SessionId = sessionDbKey;
 
             if (ct.IsCancellationRequested)
@@ -652,7 +655,6 @@ public class ChatsService : ServiceBase, IChatsService
         await HttpContext.Response.Body.FlushAsync();
     }
 
-    [AllowAnonymous]
     [OpenApiTag("ai/chats"), OpenApiOperation("语音转文字", "")]
     [RoutePattern(pattern: "speech-to-text", true)]
     public async Task<ApiResult> SpeechToTextAsync(HttpRequest request)

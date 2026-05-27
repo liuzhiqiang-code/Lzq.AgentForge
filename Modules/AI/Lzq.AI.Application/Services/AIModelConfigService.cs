@@ -4,6 +4,7 @@ using Lzq.AI.Application.Contracts.IServices;
 using Lzq.AI.Application.Contracts.Queries;
 using Lzq.AI.Domain.Entities;
 using Lzq.AI.Domain.IRepositories;
+using Lzq.Core.Interfaces;
 using Lzq.Core.Models;
 using Lzq.Extensions.AI;
 using Lzq.Extensions.AI.Interfaces;
@@ -13,6 +14,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using NSwag.Annotations;
 using SqlSugar;
+using System.Data;
 using System.Text;
 
 namespace Lzq.AI.Application.Services;
@@ -27,6 +29,7 @@ public class AIModelConfigService : ServiceBase, IAIModelConfigService
     private IAIAgentRunner AIAgentRunner => GetRequiredService<IAIAgentRunner>();
     private IModelConfigRepository ModelConfigRepository => GetRequiredService<IModelConfigRepository>();
     private IApiKeyRepository ApiKeyRepository => GetRequiredService<IApiKeyRepository>();
+    private IUnitOfWork UnitOfWork => GetRequiredService<IUnitOfWork>();
 
     [OpenApiTag("ai/modelConfig"), OpenApiOperation("获取分页列表", "")]
     [RoutePattern(pattern: "page", true)]
@@ -83,11 +86,12 @@ public class AIModelConfigService : ServiceBase, IAIModelConfigService
     [RoutePattern(pattern: "create", true)]
     public async Task<ApiResult> CreateAsync([FromBody] ModelConfigCreateCommand command)
     {
-        // 测试
         var entity = command.Map<ModelConfigEntity>();
+        var apiKey = await ApiKeyRepository.GetByIdAsync(command.ApiKeyId);
         try
         {
-            var apiKey = await ApiKeyRepository.GetByIdAsync(command.ApiKeyId);
+            await UnitOfWork.BeginTranAsync(IsolationLevel.ReadCommitted);
+            await ModelConfigRepository.InsertAsync(entity);
             var setting = new AISetting
             {
                 ConfigId = apiKey.KeyName + "_" + command.ConfigName + "_" + entity.Id,
@@ -95,18 +99,16 @@ public class AIModelConfigService : ServiceBase, IAIModelConfigService
                 Model = command.DisplayModelName,
                 KeySecret = AesUtils.Decrypt(apiKey.KeyValue, AesKey, apiKey.KeyIv)
             };
-            var agentModel = new AIAgentModel
-            {
-                Name = "测试链接"
-            };
-            var (content, _) = await AIAgentRunner.RunAsync(setting, agentModel, "Ping");
+            var agentModel = new AIAgentModel { Name = "测试链接" };
+            await AIAgentRunner.RunAsync(setting, agentModel, "Ping");
+            await UnitOfWork.CommitTranAsync();
+            return ApiResult.Success();
         }
         catch (Exception)
         {
+            await UnitOfWork.RollbackTranAsync();
             throw new UserFriendlyException("AI模型配置测试连接失败");
         }
-        await ModelConfigRepository.InsertAsync(entity);
-        return ApiResult.Success();
     }
 
     [OpenApiTag("ai/modelConfig"), OpenApiOperation("更新", "")]

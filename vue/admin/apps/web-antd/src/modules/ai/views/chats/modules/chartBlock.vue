@@ -15,7 +15,7 @@ const emit = defineEmits<{
 }>()
 
 const chartRef = ref<EchartsUIType>()
-const { renderEcharts } = useEcharts(chartRef)
+const { renderEcharts, resize: chartResize } = useEcharts(chartRef)
 
 // ========== 工具函数：递归删除值为 null 或 undefined 的属性 ==========
 function removeNullish(obj: any): any {
@@ -79,7 +79,7 @@ watch(
     if (!nowCollapsed) {
       // 展开后需要延迟到 DOM 更新完成再 resize
       nextTick(() => {
-        chartRef.value?.resize()
+        chartResize()
       })
     }
   }

@@ -261,15 +261,18 @@ const md = new MarkdownIt({
   max-width: 100%;    /* 突破气泡的 85% 限制 */
 }
 
-.loading-dots::after {
-  content: '';
+.loading-dots {
   animation: dots 1.5s steps(4, end) infinite;
+  overflow: hidden;
+  display: inline-block;
+  vertical-align: bottom;
 }
 @keyframes dots {
-  0%, 20% { content: ''; }
-  40% { content: '.'; }
-  60% { content: '..'; }
-  80%, 100% { content: '...'; }
+  0% { width: 0; }
+  25% { width: 0.6em; }
+  50% { width: 1.2em; }
+  75% { width: 1.8em; }
+  100% { width: 1.8em; }
 }
 
 .tool-block.running .tool-detail {

@@ -44,11 +44,10 @@ const stopAndConfirm = () => {
 const uploadAudio = async (audioBlob: Blob) => {
   try {
     const result = await speechToText(audioBlob)
-    console.log('语音识别结果:', result)
     emit('text-recognized', result)
   } catch (error) {
     console.error('语音上传错误', error)
-    //message.error('语音识别失败')
+    message.error('语音识别失败')
   } finally {
     isProcessing.value = false
   }

@@ -1,9 +1,9 @@
 using Lzq.AI.Application.Contracts.Commands;
 using Lzq.AI.Application.Contracts.Dtos;
 using Lzq.AI.Application.Contracts.IServices;
+using Lzq.AI.Application.Contracts.Providers;
 using Lzq.AI.Application.Contracts.Queries;
 using Lzq.AI.Application.Contracts.Requests;
-using Lzq.AI.Application.Contracts.Responses;
 using Lzq.AI.Domain.Entities;
 using Lzq.AI.Domain.Enums;
 using Lzq.AI.Domain.IRepositories;
@@ -18,7 +18,6 @@ using NSwag.Annotations;
 using SqlSugar;
 using System.Net.Http.Headers;
 using System.Text;
-using System.Text.Json;
 
 namespace Lzq.AI.Application.Services;
 
@@ -33,6 +32,8 @@ public class ApiKeyService : ServiceBase, IApiKeyService
     private IHttpClientFactory HttpClientFactory => GetRequiredService<IHttpClientFactory>();
     private IApiKeyRepository ApiKeyRepository => GetRequiredService<IApiKeyRepository>();
     private IModelConfigRepository ModelConfigRepository => GetRequiredService<IModelConfigRepository>();
+    private Dictionary<ProviderEnum, IModelProvider> Providers =>
+        GetRequiredService<IEnumerable<IModelProvider>>().ToDictionary(p => p.Provider);
 
     [OpenApiTag("ai/apiKey"), OpenApiOperation("获取分页列表", "")]
     [RoutePattern(pattern: "page", true)]
@@ -87,57 +88,27 @@ public class ApiKeyService : ServiceBase, IApiKeyService
     [RoutePattern(pattern: "getAvailableModels", true, HttpMethod = "POST")]
     public async Task<ApiResult<List<string>>> GetAvailableModelsAsync([FromBody] GetAvailableModelsRequest request)
     {
-        if (string.IsNullOrWhiteSpace(request.KeyValue) || request.Provider == 0)
+        if (string.IsNullOrWhiteSpace(request.KeyValue) || !Providers.TryGetValue(request.Provider, out var provider))
             return ApiResult.Success(new List<string>());
 
-        if (request.Provider == ProviderEnum.DeepSeek)
+        try
         {
-            try
-            {
-                var client = HttpClientFactory.CreateClient("DeepSeekClient");
-                var httpRequest = new HttpRequestMessage(HttpMethod.Get, "https://api.deepseek.com/models");
-                httpRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", request.KeyValue);
-                httpRequest.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+            var client = HttpClientFactory.CreateClient();
+            var httpRequest = new HttpRequestMessage(HttpMethod.Get, provider.ModelListUrl);
+            httpRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", request.KeyValue);
+            httpRequest.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
-                var response = await client.SendAsync(httpRequest);
-                response.EnsureSuccessStatusCode();
+            var response = await client.SendAsync(httpRequest);
+            response.EnsureSuccessStatusCode();
 
-                var content = await response.Content.ReadAsStringAsync();
-                var modelList = JsonSerializer.Deserialize<DeepSeekModelListResponse>(content);
-
-                var models = modelList?.Data.Select(m => m.Id).ToList() ?? new List<string>();
-                return ApiResult.Success(models);
-            }
-            catch (Exception)
-            {
-                throw new UserFriendlyException("ApiKey无效！");
-            }
+            var content = await response.Content.ReadAsStringAsync();
+            var models = provider.ParseModels(content);
+            return ApiResult.Success(models);
         }
-        else if (request.Provider == ProviderEnum.SiliconFlow)
+        catch (Exception)
         {
-            try
-            {
-                var client = HttpClientFactory.CreateClient("SiliconFlowClient");
-                var httpRequest = new HttpRequestMessage(HttpMethod.Get, "https://api.siliconflow.cn/v1/models");
-                httpRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", request.KeyValue);
-                httpRequest.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-
-                var response = await client.SendAsync(httpRequest);
-                response.EnsureSuccessStatusCode();
-
-                var content = await response.Content.ReadAsStringAsync();
-                var modelList = JsonSerializer.Deserialize<SiliconFlowModelListResponse>(content);
-
-                var models = modelList?.Data.Select(m => m.Id).ToList() ?? new List<string>();
-                return ApiResult.Success(models);
-            }
-            catch (Exception)
-            {
-                throw new UserFriendlyException("ApiKey无效！");
-            }
+            throw new UserFriendlyException("ApiKey无效！");
         }
-
-        return ApiResult.Success(new List<string>());
     }
 
     [OpenApiTag("ai/apiKey"), OpenApiOperation("增加", "")]
@@ -145,12 +116,8 @@ public class ApiKeyService : ServiceBase, IApiKeyService
     public async Task<ApiResult> CreateAsync([FromBody] ApiKeyCreateCommand command)
     {
         var entity = command.Map<ApiKeyEntity>();
-        entity.BaseUrl = entity.Provider switch
-        {
-            ProviderEnum.DeepSeek => "https://api.deepseek.com/v1",
-            ProviderEnum.SiliconFlow => "https://api.siliconflow.cn/v1",
-            _ => ""
-        };
+        entity.BaseUrl = Providers.TryGetValue(entity.Provider, out var provider)
+            ? provider.BaseUrl : "";
         EncryptApiKey(entity);
 
         // 调用接口获取支持的模型

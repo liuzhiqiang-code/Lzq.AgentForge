@@ -1,6 +1,7 @@
 import type { VxeTableGridOptions } from '@vben/plugins/vxe-table';
 import type { VbenFormSchema } from '#/adapter/form';
 import type { OnActionClickFn } from '#/adapter/vxe-table';
+import { getAgentSkillList } from '#/modules/ai/api/agentSkill';
 import type { AgentManageApi } from '#/modules/ai/api/agentManage';
 import { z } from '@vben/common-ui';
 import { markRaw } from 'vue';
@@ -103,8 +104,8 @@ export function useSchema(): VbenFormSchema[] {
         class: 'w-full',
         mode: 'multiple',
         api: async () => {
-          // TODO: 获取技能列表的 API
-          return [];
+          const res = await getAgentSkillList();
+          return (res || []).map(s => ({ id: s.skillName, label: s.skillName }));
         },
         placeholder: '请选择技能',
       },
