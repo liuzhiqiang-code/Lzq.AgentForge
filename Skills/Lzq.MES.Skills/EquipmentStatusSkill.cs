@@ -1,6 +1,6 @@
-using Lzq.Equipment.Application.Contracts.IServices;
-using Lzq.Equipment.Application.Contracts.Queries;
-using Lzq.Equipment.Domain.Enums;
+using Lzq.MES.Application.Contracts.IServices;
+using Lzq.MES.Application.Contracts.Queries;
+using Lzq.MES.Domain.Enums;
 using Lzq.Extensions.AI.AgentSkills;
 using Microsoft.Agents.AI;
 using System.ComponentModel;

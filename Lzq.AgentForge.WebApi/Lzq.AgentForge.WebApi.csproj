@@ -19,13 +19,9 @@
 
     <ItemGroup>
         <ProjectReference Include="..\Modules\AI\Lzq.AI.Application\Lzq.AI.Application.csproj" />
-        <ProjectReference Include="..\Modules\BaseData\Lzq.BaseData.Application\Lzq.BaseData.Application.csproj" />
-        <ProjectReference Include="..\Modules\Dashboard\Lzq.Dashboard.Application\Lzq.Dashboard.Application.csproj" />
-        <ProjectReference Include="..\Modules\Equipment\Lzq.Equipment.Application\Lzq.Equipment.Application.csproj" />
-        <ProjectReference Include="..\Modules\QA\Lzq.QA.Application\Lzq.QA.Application.csproj" />
+        <ProjectReference Include="..\Modules\MES\Lzq.MES.Application\Lzq.MES.Application.csproj" />
         <ProjectReference Include="..\Modules\Rbac\Lzq.Rbac.Application\Lzq.Rbac.Application.csproj" />
         <ProjectReference Include="..\Modules\Temp\Lzq.Temp.Application\Lzq.Temp.Application.csproj" />
-        <ProjectReference Include="..\Modules\WorkOrder\Lzq.WorkOrder.Application\Lzq.WorkOrder.Application.csproj" />
         <ProjectReference Include="..\Skills\Lzq.MES.Skills\Lzq.MES.Skills.csproj" />
     </ItemGroup>
 

@@ -14,10 +14,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\..\Modules\BaseData\Lzq.BaseData.Application.Contracts\Lzq.BaseData.Application.Contracts.csproj" />
-        <ProjectReference Include="..\..\Modules\Equipment\Lzq.Equipment.Application.Contracts\Lzq.Equipment.Application.Contracts.csproj" />
-        <ProjectReference Include="..\..\Modules\QA\Lzq.QA.Application.Contracts\Lzq.QA.Application.Contracts.csproj" />
-        <ProjectReference Include="..\..\Modules\WorkOrder\Lzq.WorkOrder.Application.Contracts\Lzq.WorkOrder.Application.Contracts.csproj" />
+        <ProjectReference Include="..\..\Modules\MES\Lzq.MES.Application.Contracts\Lzq.MES.Application.Contracts.csproj" />
     </ItemGroup>
 
 </Project>

@@ -1,8 +1,8 @@
 using Lzq.Extensions.AI.AgentSkills;
-using Lzq.QA.Application.Contracts.IServices;
-using Lzq.QA.Application.Contracts.Queries;
-using Lzq.WorkOrder.Application.Contracts.IServices.WorkOrder;
-using Lzq.WorkOrder.Application.Contracts.WorkOrder.Queries;
+using Lzq.MES.Application.Contracts.IServices;
+using Lzq.MES.Application.Contracts.Queries;
+using Lzq.MES.Application.Contracts.IServices.WorkOrder;
+using Lzq.MES.Application.Contracts.WorkOrder.Queries;
 using Microsoft.Agents.AI;
 using System.ComponentModel;
 using System.Text.Json;

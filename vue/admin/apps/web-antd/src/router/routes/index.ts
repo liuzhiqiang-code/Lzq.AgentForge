@@ -6,11 +6,7 @@ import { coreRoutes, fallbackNotFoundRoute } from './core';
 
 // 从模块中导入路由（模块化路由）
 // import { aiRoutes } from '#/modules/ai';
-// import { basadataRoutes } from '#/modules/basadata';
-// import { dashboardRoutes } from '#/modules/dashboard';
-// import { equipmentRoutes } from '#/modules/equipment';
-// import { qaRoutes } from '#/modules/qa';
-// import { workorderRoutes } from '#/modules/workorder';
+// import { mesRoutes } from '#/modules/mes';
 
 const dynamicRouteFiles = import.meta.glob('./modules/**/*.ts', {
   eager: true,
@@ -32,11 +28,7 @@ const externalRoutes: RouteRecordRaw[] = [];
 /** 模块化路由列表（从 modules/{module}/router/ 手动导入） */
 const moduleRoutes: RouteRecordRaw[] = [
   //...aiRoutes,
-  // ...basadataRoutes,
-  // ...dashboardRoutes,
-  // ...equipmentRoutes,
-  // ...qaRoutes,
-  // ...workorderRoutes,
+  //...mesRoutes,
 ];
 
 /** 路由列表，由基本路由、外部路由和404兜底路由组成

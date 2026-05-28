@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
+    <ItemGroup>
+        <PackageReference Include="Lzq.Core" Version="$(LzqExtensionsVersion)" />
+        <PackageReference Include="Lzq.Extensions.NSwag" Version="$(LzqExtensionsVersion)" />
+        <PackageReference Include="Lzq.Extensions.Redis" Version="$(LzqExtensionsVersion)" />
+        <PackageReference Include="Lzq.Extensions.SqlSugar" Version="$(LzqExtensionsVersion)" />
+    </ItemGroup>
+    <ItemGroup>
+        <ProjectReference Include="..\Lzq.MES.Domain\Lzq.MES.Domain.csproj" />
+        <ProjectReference Include="..\Lzq.MES.Application.Contracts\Lzq.MES.Application.Contracts.csproj" />
+    </ItemGroup>
+</Project>

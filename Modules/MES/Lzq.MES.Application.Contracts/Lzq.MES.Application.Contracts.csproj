@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
+    <ItemGroup>
+        <PackageReference Include="Lzq.Extensions.Jwt" Version="$(LzqExtensionsVersion)" />
+        <PackageReference Include="Lzq.Extensions.ExternalHttpApi" Version="$(LzqExtensionsVersion)" />
+    </ItemGroup>
+    <ItemGroup>
+        <ProjectReference Include="..\Lzq.MES.Domain\Lzq.MES.Domain.csproj" />
+    </ItemGroup>
+</Project>

@@ -187,327 +187,123 @@ public class MenuSeedData : BaseSeedData<MenuEntity>
                 }
             },
 
-            // ======================== 基础数据目录 ========================
+            // ======================== MES 目录（合并基础数据/设备/质量/工单/仪表板）========================
             new MenuEntity
             {
                 Id = 3,
-                Name = "Basadata",
-                Path = "/basadata",
-                // 已移除 Redirect，因为 TS 路由中无重定向
+                Name = "MES",
+                Path = "/mes",
                 Type = "catalog",
                 Status = EnableStatusEnum.Enabled,
                 Meta = new MenuMeta
                 {
-                    Order = 1000,                       // 修改为与 TS 一致的 1000
-                    Icon = "ion:server-outline",        // 修改为与 TS 一致的图标
-                    Title = "basadata.title"
+                    Order = 1000,
+                    Icon = "ion:server-outline",
+                    Title = "mes.title"
                 },
                 Children = new List<MenuEntity>
                 {
-                    // factory 页
+                    // ===== Basadata 子目录 =====
                     new MenuEntity
                     {
                         Id = 301,
-                        Name = "BasadataFactory",
-                        Path = "/basadata/factory",
-                        Component = "#/modules/basadata/views/factory/list.vue",
-                        Type = "menu",
+                        Name = "MESBaseData",
+                        Path = "/mes/basadata",
+                        Type = "catalog",
                         Status = EnableStatusEnum.Enabled,
                         Meta = new MenuMeta
                         {
-                            Icon = "mdi:factory",
-                            Title = "basadata.factory.title"
-                        }
-                    },
-                    // workshop 页 （顺序提前到第二位）
-                    new MenuEntity
-                    {
-                        Id = 304,
-                        Name = "BasadataWorkshop",
-                        Path = "/basadata/workshop",
-                        Component = "#/modules/basadata/views/workshop/list.vue",
-                        Type = "menu",
-                        Status = EnableStatusEnum.Enabled,
-                        Meta = new MenuMeta
+                            Icon = "ion:server-outline",
+                            Title = "mes.basadata.title"
+                        },
+                        Children = new List<MenuEntity>
                         {
-                            Icon = "mdi:warehouse",
-                            Title = "basadata.workshop.title"
+                            new MenuEntity { Id = 30101, Name = "MESFactory", Path = "/mes/basadata/factory", Component = "#/modules/mes/views/basadata/factory/list.vue", Type = "menu", Status = EnableStatusEnum.Enabled, Meta = new MenuMeta { Icon = "mdi:factory", Title = "mes.basadata.factory.title" } },
+                            new MenuEntity { Id = 30102, Name = "MESWorkshop", Path = "/mes/basadata/workshop", Component = "#/modules/mes/views/basadata/workshop/list.vue", Type = "menu", Status = EnableStatusEnum.Enabled, Meta = new MenuMeta { Icon = "mdi:warehouse", Title = "mes.basadata.workshop.title" } },
+                            new MenuEntity { Id = 30103, Name = "MESLine", Path = "/mes/basadata/line", Component = "#/modules/mes/views/basadata/line/list.vue", Type = "menu", Status = EnableStatusEnum.Enabled, Meta = new MenuMeta { Icon = "mdi:sort-variant", Title = "mes.basadata.line.title" } },
+                            new MenuEntity { Id = 30104, Name = "MESProcess", Path = "/mes/basadata/process", Component = "#/modules/mes/views/basadata/process/list.vue", Type = "menu", Status = EnableStatusEnum.Enabled, Meta = new MenuMeta { Icon = "mdi:cog-sync-outline", Title = "mes.basadata.process.title" } },
+                            new MenuEntity { Id = 30105, Name = "MESMaterial", Path = "/mes/basadata/material", Component = "#/modules/mes/views/basadata/material/list.vue", Type = "menu", Status = EnableStatusEnum.Enabled, Meta = new MenuMeta { Icon = "mdi:package-variant-closed", Title = "mes.basadata.material.title" } },
                         }
                     },
-                    // line 页 （图标修正，顺序后移）
+                    // ===== WorkOrder 子目录 =====
                     new MenuEntity
                     {
                         Id = 302,
-                        Name = "BasadataLine",
-                        Path = "/basadata/line",
-                        Component = "#/modules/basadata/views/line/list.vue",
-                        Type = "menu",
+                        Name = "MESWorkOrder",
+                        Path = "/mes/workorder",
+                        Type = "catalog",
                         Status = EnableStatusEnum.Enabled,
                         Meta = new MenuMeta
                         {
-                            Icon = "mdi:sort-variant",   // 修改为与 TS 一致
-                            Title = "basadata.line.title"
+                            Icon = "mdi:clipboard-text-outline",
+                            Title = "mes.workorder.title"
+                        },
+                        Children = new List<MenuEntity>
+                        {
+                            new MenuEntity { Id = 30201, Name = "MESWorkOrderList", Path = "/mes/workorder/list", Component = "#/modules/mes/views/workorder/workorder/list.vue", Type = "menu", Status = EnableStatusEnum.Enabled, Meta = new MenuMeta { Icon = "mdi:clipboard-list-outline", Title = "mes.workorder.workorder.title" } },
+                            new MenuEntity { Id = 30202, Name = "MESWorkReport", Path = "/mes/workorder/workreport", Component = "#/modules/mes/views/workorder/workreport/list.vue", Type = "menu", Status = EnableStatusEnum.Enabled, Meta = new MenuMeta { Icon = "mdi:clipboard-check-outline", Title = "mes.workorder.workreport.title" } },
                         }
                     },
-                    // process 页 （图标修正，顺序最后）
+                    // ===== QA 子目录 =====
                     new MenuEntity
                     {
                         Id = 303,
-                        Name = "BasadataProcess",
-                        Path = "/basadata/process",
-                        Component = "#/modules/basadata/views/process/list.vue",
-                        Type = "menu",
+                        Name = "MESQA",
+                        Path = "/mes/qa",
+                        Type = "catalog",
                         Status = EnableStatusEnum.Enabled,
                         Meta = new MenuMeta
                         {
-                            Icon = "mdi:cog-sync-outline",   // 修改为与 TS 一致
-                            Title = "basadata.process.title"
-                        }
-                    }
-                }
-            },
-
-            // ======================== 设备管理目录 ========================
-            new MenuEntity
-            {
-                Id = 4,
-                Name = "Equipment",
-                Path = "/equipment",
-                // 已移除 Redirect，TS 中无重定向
-                Type = "catalog",
-                Status = EnableStatusEnum.Enabled,
-                Meta = new MenuMeta
-                {
-                    Order = 1030,                            // 修改为与 TS 一致的排序值
-                    Icon = "mdi:tools",                      // 图标一致，无需修改
-                    Title = "equipment.title"
-                },
-                Children = new List<MenuEntity>
-                {
-                    // equipment 页
-                    new MenuEntity
-                    {
-                        Id = 401,
-                        Name = "EquipmentEquipment",
-                        Path = "/equipment/list",            // 路径修正为 TS 中定义的 /equipment/list
-                        Component = "#/modules/equipment/views/equipment/list.vue",
-                        Type = "menu",
-                        Status = EnableStatusEnum.Enabled,
-                        Meta = new MenuMeta
+                            Icon = "mdi:shield-check-outline",
+                            Title = "mes.qa.title"
+                        },
+                        Children = new List<MenuEntity>
                         {
-                            Icon = "mdi:excavator",          // 图标修正为 mdi:excavator
-                            Title = "equipment.equipment.title"
+                            new MenuEntity { Id = 30301, Name = "MESQCOrder", Path = "/mes/qa/qcorder", Component = "#/modules/mes/views/qa/qcorder/list.vue", Type = "menu", Status = EnableStatusEnum.Enabled, Meta = new MenuMeta { Icon = "mdi:clipboard-check-outline", Title = "mes.qa.qcorder.title" } },
+                            new MenuEntity { Id = 30302, Name = "MESDefect", Path = "/mes/qa/defect", Component = "#/modules/mes/views/qa/defect/list.vue", Type = "menu", Status = EnableStatusEnum.Enabled, Meta = new MenuMeta { Icon = "mdi:alert-circle-outline", Title = "mes.qa.defect.title" } },
                         }
                     },
-                    // inspection-plan 页
+                    // ===== Equipment 子目录 =====
                     new MenuEntity
                     {
-                        Id = 402,
-                        Name = "EquipmentInspectionPlan",
-                        Path = "/equipment/inspection-plan", // 路径扁平化，与 TS 一致
-                        Component = "#/modules/equipment/views/inspection/plan/list.vue",
-                        Type = "menu",
+                        Id = 304,
+                        Name = "MESEquipment",
+                        Path = "/mes/equipment",
+                        Type = "catalog",
                         Status = EnableStatusEnum.Enabled,
                         Meta = new MenuMeta
                         {
-                            Icon = "mdi:clipboard-text-search-outline", // 修正图标
-                            Title = "equipment.inspectionPlan.title"
+                            Icon = "mdi:tools",
+                            Title = "mes.equipment.title"
+                        },
+                        Children = new List<MenuEntity>
+                        {
+                            new MenuEntity { Id = 30401, Name = "MESEquipmentList", Path = "/mes/equipment/list", Component = "#/modules/mes/views/equipment/equipment/list.vue", Type = "menu", Status = EnableStatusEnum.Enabled, Meta = new MenuMeta { Icon = "mdi:excavator", Title = "mes.equipment.equipment.title" } },
+                            new MenuEntity { Id = 30402, Name = "MESInspectionPlan", Path = "/mes/equipment/inspection-plan", Component = "#/modules/mes/views/equipment/inspection/plan/list.vue", Type = "menu", Status = EnableStatusEnum.Enabled, Meta = new MenuMeta { Icon = "mdi:clipboard-text-search-outline", Title = "mes.equipment.inspectionPlan.title" } },
+                            new MenuEntity { Id = 30403, Name = "MESInspectionRecord", Path = "/mes/equipment/inspection-record", Component = "#/modules/mes/views/equipment/inspection/record/list.vue", Type = "menu", Status = EnableStatusEnum.Enabled, Meta = new MenuMeta { Icon = "mdi:clipboard-check-outline", Title = "mes.equipment.inspectionRecord.title" } },
+                            new MenuEntity { Id = 30404, Name = "MESMaintenancePlan", Path = "/mes/equipment/maintenance-plan", Component = "#/modules/mes/views/equipment/maintenance/plan/list.vue", Type = "menu", Status = EnableStatusEnum.Enabled, Meta = new MenuMeta { Icon = "mdi:wrench-clock-outline", Title = "mes.equipment.maintenancePlan.title" } },
+                            new MenuEntity { Id = 30405, Name = "MESMaintenanceRecord", Path = "/mes/equipment/maintenance-record", Component = "#/modules/mes/views/equipment/maintenance/record/list.vue", Type = "menu", Status = EnableStatusEnum.Enabled, Meta = new MenuMeta { Icon = "mdi:wrench-check-outline", Title = "mes.equipment.maintenanceRecord.title" } },
+                            new MenuEntity { Id = 30406, Name = "MESRepair", Path = "/mes/equipment/repair", Component = "#/modules/mes/views/equipment/repair/list.vue", Type = "menu", Status = EnableStatusEnum.Enabled, Meta = new MenuMeta { Icon = "mdi:hammer-wrench", Title = "mes.equipment.repair.title" } },
                         }
                     },
-                    // inspection-record 页
+                    // ===== Dashboard 子目录 =====
                     new MenuEntity
                     {
-                        Id = 403,
-                        Name = "EquipmentInspectionRecord",
-                        Path = "/equipment/inspection-record",
-                        Component = "#/modules/equipment/views/inspection/record/list.vue",
-                        Type = "menu",
+                        Id = 305,
+                        Name = "MESDashboard",
+                        Path = "/mes/dashboard",
+                        Type = "catalog",
                         Status = EnableStatusEnum.Enabled,
                         Meta = new MenuMeta
                         {
-                            Icon = "mdi:clipboard-check-outline",       // 修正图标
-                            Title = "equipment.inspectionRecord.title"
+                            Icon = "mdi:view-dashboard-outline",
+                            Title = "mes.dashboard.title"
+                        },
+                        Children = new List<MenuEntity>
+                        {
+                            new MenuEntity { Id = 30501, Name = "MESDashboardIndex", Path = "/mes/dashboard/index", Component = "#/modules/mes/views/dashboard/index.vue", Type = "menu", Status = EnableStatusEnum.Enabled, Meta = new MenuMeta { Icon = "mdi:monitor-dashboard", Title = "mes.dashboard.overview" } },
                         }
                     },
-                    // maintenance-plan 页
-                    new MenuEntity
-                    {
-                        Id = 404,
-                        Name = "EquipmentMaintenancePlan",
-                        Path = "/equipment/maintenance-plan",
-                        Component = "#/modules/equipment/views/maintenance/plan/list.vue",
-                        Type = "menu",
-                        Status = EnableStatusEnum.Enabled,
-                        Meta = new MenuMeta
-                        {
-                            Icon = "mdi:wrench-clock-outline",          // 修正图标
-                            Title = "equipment.maintenancePlan.title"
-                        }
-                    },
-                    // maintenance-record 页
-                    new MenuEntity
-                    {
-                        Id = 405,
-                        Name = "EquipmentMaintenanceRecord",
-                        Path = "/equipment/maintenance-record",
-                        Component = "#/modules/equipment/views/maintenance/record/list.vue",
-                        Type = "menu",
-                        Status = EnableStatusEnum.Enabled,
-                        Meta = new MenuMeta
-                        {
-                            Icon = "mdi:wrench-check-outline",          // 修正图标
-                            Title = "equipment.maintenanceRecord.title"
-                        }
-                    },
-                    // repair 页
-                    new MenuEntity
-                    {
-                        Id = 406,
-                        Name = "EquipmentRepair",
-                        Path = "/equipment/repair",
-                        Component = "#/modules/equipment/views/repair/list.vue",
-                        Type = "menu",
-                        Status = EnableStatusEnum.Enabled,
-                        Meta = new MenuMeta
-                        {
-                            Icon = "mdi:hammer-wrench",                 // 修正图标
-                            Title = "equipment.repair.title"
-                        }
-                    }
-                }
-            },
-
-            // ======================== 质量管理目录 ========================
-            new MenuEntity
-            {
-                Id = 5,
-                Name = "QA",
-                Path = "/qa",
-                // 已移除 Redirect，TS 中无重定向
-                Type = "catalog",
-                Status = EnableStatusEnum.Enabled,
-                Meta = new MenuMeta
-                {
-                    Order = 1020,                           // 修正为 TS 中的排序值
-                    Icon = "mdi:shield-check-outline",      // 修正为 TS 中的图标
-                    Title = "qa.title"
-                },
-                Children = new List<MenuEntity>
-                {
-                    // qcorder 页 （顺序调整为第一）
-                    new MenuEntity
-                    {
-                        Id = 502,
-                        Name = "QaQcOrder",
-                        Path = "/qa/qcorder",
-                        Component = "#/modules/qa/views/qcorder/list.vue",
-                        Type = "menu",
-                        Status = EnableStatusEnum.Enabled,
-                        Meta = new MenuMeta
-                        {
-                            Icon = "mdi:clipboard-check-outline",    // 与 TS 一致，无需修改
-                            Title = "qa.qcorder.title"
-                        }
-                    },
-                    // defect 页 （顺序调整为第二，图标修正）
-                    new MenuEntity
-                    {
-                        Id = 501,
-                        Name = "QaDefect",
-                        Path = "/qa/defect",
-                        Component = "#/modules/qa/views/defect/list.vue",
-                        Type = "menu",
-                        Status = EnableStatusEnum.Enabled,
-                        Meta = new MenuMeta
-                        {
-                            Icon = "mdi:alert-circle-outline",      // 修正为 TS 中的图标
-                            Title = "qa.defect.title"
-                        }
-                    }
-                }
-            },
-
-            // ======================== 工单管理目录 ========================
-            new MenuEntity
-            {
-                Id = 6,
-                Name = "Workorder",
-                Path = "/workorder",
-                // 已移除 Redirect，与 TS 一致
-                Type = "catalog",
-                Status = EnableStatusEnum.Enabled,
-                Meta = new MenuMeta
-                {
-                    Order = 1010,                           // 修正为 TS 中的排序值
-                    Icon = "mdi:clipboard-text-outline",    // 修正为 TS 中的图标
-                    Title = "workorder.title"
-                },
-                Children = new List<MenuEntity>
-                {
-                    // workorder 页
-                    new MenuEntity
-                    {
-                        Id = 601,
-                        Name = "WorkorderWorkorder",
-                        Path = "/workorder/list",
-                        Component = "#/modules/workorder/views/workorder/list.vue",
-                        Type = "menu",
-                        Status = EnableStatusEnum.Enabled,
-                        Meta = new MenuMeta
-                        {
-                            Icon = "mdi:clipboard-list-outline", // 修正图标
-                            Title = "workorder.workorder.title"
-                        }
-                    },
-                    // workreport 页
-                    new MenuEntity
-                    {
-                        Id = 602,
-                        Name = "WorkorderWorkreport",
-                        Path = "/workorder/workreport",
-                        Component = "#/modules/workorder/views/workreport/list.vue",
-                        Type = "menu",
-                        Status = EnableStatusEnum.Enabled,
-                        Meta = new MenuMeta
-                        {
-                            Icon = "mdi:clipboard-check-outline", // 修正图标
-                            Title = "workorder.workreport.title"
-                        }
-                    }
-                }
-            },
-
-            // ======================== 仪表板目录 ========================
-            new MenuEntity
-            {
-                Id = 7,                                      // 假设下一个可用的 Id
-                Name = "MESDashboard",                       // 与 TS 中 name 一致
-                Path = "/mes-dashboard",
-                Type = "catalog",
-                Status = EnableStatusEnum.Enabled,
-                Meta = new MenuMeta
-                {
-                    Order = 1040,
-                    Icon = "mdi:view-dashboard-outline",
-                    Title = "dashboard.title"
-                },
-                Children = new List<MenuEntity>
-                {
-                    // 仪表板首页
-                    new MenuEntity
-                    {
-                        Id = 701,
-                        Name = "DashboardIndex",
-                        Path = "/dashboard/index",           // 与 TS 中绝对路径保持一致
-                        Component = "#/modules/dashboard/views/index.vue",
-                        Type = "menu",
-                        Status = EnableStatusEnum.Enabled,
-                        Meta = new MenuMeta
-                        {
-                            Icon = "mdi:monitor-dashboard",
-                            Title = "dashboard.overview"
-                        }
-                    }
                 }
             }
         };

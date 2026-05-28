@@ -1,19 +1,15 @@
 using Lzq.AgentForge.WebApi.Extensions;
 using Lzq.AI.Application;
-using Lzq.BaseData.Application;
 using Lzq.Core.Json;
 using Lzq.Core.Modules;
-using Lzq.Dashboard.Application;
-using Lzq.Equipment.Application;
 using Lzq.Extensions.EventBus;
 using Lzq.Extensions.ExternalHttpApi;
 using Lzq.Extensions.Jwt;
 using Lzq.Extensions.NSwag;
 using Lzq.Extensions.Redis;
-using Lzq.QA.Application;
+using Lzq.MES.Application;
 using Lzq.Rbac.Application;
 using Lzq.Temp.Application;
-using Lzq.WorkOrder.Application;
 using Masa.BuildingBlocks.Data;
 
 namespace Lzq.AgentForge.WebApi;
@@ -26,11 +22,7 @@ namespace Lzq.AgentForge.WebApi;
     typeof(EventBusModule),
     typeof(RbacApplicationModule),
     typeof(AIApplicationModule),
-    typeof(BaseDataApplicationModule),
-    typeof(EquipmentApplicationModule),
-    typeof(QAApplicationModule),
-    typeof(WorkOrderApplicationModule),
-    typeof(DashboardApplicationModule),
+    typeof(MESApplicationModule),
     typeof(TempApplicationModule)
 )]
 public class WebApiModule : BaseModule

@@ -1,7 +1,7 @@
 using Lzq.Extensions.AI.AgentSkills;
-using Lzq.WorkOrder.Application.Contracts.IServices.WorkOrder;
-using Lzq.WorkOrder.Application.Contracts.WorkOrder.Queries;
-using Lzq.WorkOrder.Domain.Enums;
+using Lzq.MES.Application.Contracts.IServices.WorkOrder;
+using Lzq.MES.Application.Contracts.WorkOrder.Queries;
+using Lzq.MES.Domain.Enums;
 using Microsoft.Agents.AI;
 using System.ComponentModel;
 using System.Text.Json;
