@@ -65,6 +65,5 @@ export async function logoutApi() {
  * 获取用户权限码
  */
 export async function getAccessCodesApi() {
-  return [];
-  //return msmRequestClient.get<string[]>('/auth/codes');
+  return requestClient.get<string[]>('/rbac/menu/accessCodes');
 }

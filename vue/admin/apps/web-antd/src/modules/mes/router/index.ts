@@ -9,7 +9,7 @@ const routes: RouteRecordRaw[] = [
       order: 1000,
       title: $t('mes.title'),
     },
-    name: 'MES',
+    name: 'Mes',
     path: '/mes',
     children: [
       {
@@ -17,12 +17,12 @@ const routes: RouteRecordRaw[] = [
           icon: 'ion:server-outline',
           title: $t('mes.basadata.title'),
         },
-        name: 'MESBaseData',
+        name: 'MesBaseData',
         path: '/mes/basadata',
         children: [
           {
             path: '/mes/basadata/factory',
-            name: 'MESFactory',
+            name: 'MesFactory',
             meta: {
               icon: 'mdi:factory',
               title: $t('mes.basadata.factory.title'),
@@ -31,7 +31,7 @@ const routes: RouteRecordRaw[] = [
           },
           {
             path: '/mes/basadata/workshop',
-            name: 'MESWorkshop',
+            name: 'MesWorkshop',
             meta: {
               icon: 'mdi:warehouse',
               title: $t('mes.basadata.workshop.title'),
@@ -40,7 +40,7 @@ const routes: RouteRecordRaw[] = [
           },
           {
             path: '/mes/basadata/line',
-            name: 'MESLine',
+            name: 'MesLine',
             meta: {
               icon: 'mdi:sort-variant',
               title: $t('mes.basadata.line.title'),
@@ -49,7 +49,7 @@ const routes: RouteRecordRaw[] = [
           },
           {
             path: '/mes/basadata/process',
-            name: 'MESProcess',
+            name: 'MesProcess',
             meta: {
               icon: 'mdi:cog-sync-outline',
               title: $t('mes.basadata.process.title'),
@@ -58,7 +58,7 @@ const routes: RouteRecordRaw[] = [
           },
           {
             path: '/mes/basadata/material',
-            name: 'MESMaterial',
+            name: 'MesMaterial',
             meta: {
               icon: 'mdi:package-variant-closed',
               title: $t('mes.basadata.material.title'),
@@ -72,12 +72,12 @@ const routes: RouteRecordRaw[] = [
           icon: 'mdi:clipboard-text-outline',
           title: $t('mes.workorder.title'),
         },
-        name: 'MESWorkOrder',
+        name: 'MesWorkOrder',
         path: '/mes/workorder',
         children: [
           {
             path: '/mes/workorder/list',
-            name: 'MESWorkOrderList',
+            name: 'MesWorkOrderList',
             meta: {
               icon: 'mdi:clipboard-list-outline',
               title: $t('mes.workorder.workorder.title'),
@@ -86,7 +86,7 @@ const routes: RouteRecordRaw[] = [
           },
           {
             path: '/mes/workorder/workreport',
-            name: 'MESWorkReport',
+            name: 'MesWorkReport',
             meta: {
               icon: 'mdi:clipboard-check-outline',
               title: $t('mes.workorder.workreport.title'),
@@ -100,12 +100,12 @@ const routes: RouteRecordRaw[] = [
           icon: 'mdi:shield-check-outline',
           title: $t('mes.qa.title'),
         },
-        name: 'MESQA',
+        name: 'MesQA',
         path: '/mes/qa',
         children: [
           {
             path: '/mes/qa/qcorder',
-            name: 'MESQCOrder',
+            name: 'MesQCOrder',
             meta: {
               icon: 'mdi:clipboard-check-outline',
               title: $t('mes.qa.qcorder.title'),
@@ -114,7 +114,7 @@ const routes: RouteRecordRaw[] = [
           },
           {
             path: '/mes/qa/defect',
-            name: 'MESDefect',
+            name: 'MesDefect',
             meta: {
               icon: 'mdi:alert-circle-outline',
               title: $t('mes.qa.defect.title'),
@@ -128,12 +128,12 @@ const routes: RouteRecordRaw[] = [
           icon: 'mdi:tools',
           title: $t('mes.equipment.title'),
         },
-        name: 'MESEquipment',
+        name: 'MesEquipment',
         path: '/mes/equipment',
         children: [
           {
             path: '/mes/equipment/list',
-            name: 'MESEquipmentList',
+            name: 'MesEquipmentList',
             meta: {
               icon: 'mdi:excavator',
               title: $t('mes.equipment.equipment.title'),
@@ -142,7 +142,7 @@ const routes: RouteRecordRaw[] = [
           },
           {
             path: '/mes/equipment/inspection-plan',
-            name: 'MESInspectionPlan',
+            name: 'MesInspectionPlan',
             meta: {
               icon: 'mdi:clipboard-text-search-outline',
               title: $t('mes.equipment.inspectionPlan.title'),
@@ -151,7 +151,7 @@ const routes: RouteRecordRaw[] = [
           },
           {
             path: '/mes/equipment/inspection-record',
-            name: 'MESInspectionRecord',
+            name: 'MesInspectionRecord',
             meta: {
               icon: 'mdi:clipboard-check-outline',
               title: $t('mes.equipment.inspectionRecord.title'),
@@ -160,7 +160,7 @@ const routes: RouteRecordRaw[] = [
           },
           {
             path: '/mes/equipment/maintenance-plan',
-            name: 'MESMaintenancePlan',
+            name: 'MesMaintenancePlan',
             meta: {
               icon: 'mdi:wrench-clock-outline',
               title: $t('mes.equipment.maintenancePlan.title'),
@@ -169,7 +169,7 @@ const routes: RouteRecordRaw[] = [
           },
           {
             path: '/mes/equipment/maintenance-record',
-            name: 'MESMaintenanceRecord',
+            name: 'MesMaintenanceRecord',
             meta: {
               icon: 'mdi:wrench-check-outline',
               title: $t('mes.equipment.maintenanceRecord.title'),
@@ -178,7 +178,7 @@ const routes: RouteRecordRaw[] = [
           },
           {
             path: '/mes/equipment/repair',
-            name: 'MESRepair',
+            name: 'MesRepair',
             meta: {
               icon: 'mdi:hammer-wrench',
               title: $t('mes.equipment.repair.title'),
@@ -192,12 +192,12 @@ const routes: RouteRecordRaw[] = [
           icon: 'mdi:view-dashboard-outline',
           title: $t('mes.dashboard.title'),
         },
-        name: 'MESDashboard',
+        name: 'MesDashboard',
         path: '/mes/dashboard',
         children: [
           {
             path: '/mes/dashboard/index',
-            name: 'MESDashboardIndex',
+            name: 'MesDashboardIndex',
             meta: {
               icon: 'mdi:monitor-dashboard',
               title: $t('mes.dashboard.overview'),

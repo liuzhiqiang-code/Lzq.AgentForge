@@ -7,6 +7,7 @@ import { coreRoutes, fallbackNotFoundRoute } from './core';
 // 从模块中导入路由（模块化路由）
 // import { aiRoutes } from '#/modules/ai';
 // import { mesRoutes } from '#/modules/mes';
+// import { rbacRoutes } from '#/modules/rbac';
 
 const dynamicRouteFiles = import.meta.glob('./modules/**/*.ts', {
   eager: true,
@@ -28,6 +29,7 @@ const externalRoutes: RouteRecordRaw[] = [];
 /** 模块化路由列表（从 modules/{module}/router/ 手动导入） */
 const moduleRoutes: RouteRecordRaw[] = [
   //...aiRoutes,
+  //...rbacRoutes,
   //...mesRoutes,
 ];
 

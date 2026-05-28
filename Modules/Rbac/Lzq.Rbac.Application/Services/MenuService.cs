@@ -86,7 +86,7 @@ public class MenuService : ServiceBase, IMenuService
     [RoutePattern(pattern: "all", true, HttpMethod = "GET")]
     public async Task<ApiResult> AllAsync()
     {
-        var query = MenuRepository.AsQueryable();
+        var query = MenuRepository.AsQueryable().Where(a => new string[] { "catalog", "menu" }.Contains(a.Type));
         if (!CurrentUser.Roles.Contains("1")) //1是管理员角色id
         {
             var menuIds = await RoleAuthRepository.AsQueryable()
@@ -99,6 +99,21 @@ public class MenuService : ServiceBase, IMenuService
 
         // 构建树形结构
         return ApiResult.Success(BuildMenuTree(allMenus, null));
+    }
+
+    [OpenApiTag("rbac/menu"), OpenApiOperation("获取用户权限码", "")]
+    [RoutePattern(pattern: "accessCodes", true, HttpMethod = "GET")]
+    public async Task<ApiResult> GetAccessCodesAsync()
+    {
+        var query = MenuRepository.AsQueryable().Where(a => new string[] { "menu", "button" }.Contains(a.Type));
+        if (!CurrentUser.Roles.Contains("1")) //1是管理员角色id
+        {
+            return ApiResult.Success(new List<string>());
+        }
+        var allMenus = await query.ToListAsync();
+
+        // 构建树形结构
+        return ApiResult.Success(allMenus.Select(a => a.AuthCode).Distinct().ToList());
     }
 
     [OpenApiTag("rbac/menu"), OpenApiOperation("新增菜单", "")]
@@ -134,6 +149,4 @@ public class MenuService : ServiceBase, IMenuService
         await MenuRepository.DeleteAsync(a => ids.Contains(a.Id));
         return ApiResult.Success();
     }
-
-
 }
